@@ -122,10 +122,39 @@ flutter build apk --release  # Release APK
 5. Set up Codemagic CI/CD
 6. Fixed Android crash (nullable IAP subscription)
 
+### Session 21 Jan 2025 - Critical Fixes
+7. **Fixed MainActivity package mismatch** - was `com.example.x5_app`, changed to `com.x5marketing.mobile` (must match applicationId in build.gradle.kts)
+8. **Made IAP initialization lazy** - `InAppPurchase.instance` was crashing on startup, now initialized in `_initIAP()` method
+9. **Added null-checks for all IAP operations** - `_inAppPurchase` is now nullable with proper checks
+10. **Wrapped main() in runZonedGuarded** - catches all unhandled errors
+11. **Deferred platform init to addPostFrameCallback** - SystemChrome and IAP init now happens after first frame
+12. **Removed center sparkle button from tab bar** - now 4 buttons (Home, Courses, Hire, Profile)
+13. **Removed X5 Pro banner from HomeView** - was partially visible/cut off
+
+## Critical Architecture Notes
+
+### Flutter/Android
+- **MainActivity location**: `flutter/android/app/src/main/kotlin/com/x5marketing/mobile/MainActivity.kt`
+- **applicationId**: `com.x5marketing.mobile` (in build.gradle.kts)
+- **IMPORTANT**: MainActivity package MUST match applicationId, otherwise app crashes on launch
+- **IAP is lazy**: Don't initialize `InAppPurchase.instance` in class fields, do it in async method
+- **flutter_windowmanager_plus**: Used for screen protection, wrapped in try-catch
+
+### Web/React
+- **Tab bar**: 4 buttons only (no center action button)
+- **HomeView**: No Pro banner at top (users access paywall via credits button)
+
 ## Known Issues / TODO
 - iOS build needs Apple Developer certificates
 - Release Android build needs keystore upload to Codemagic
 - Video compression only works in browser (not in Flutter WebView)
+- **Android crash still being investigated** - if still crashes, check logcat for actual error
+
+## Codemagic Workflows
+- `android-debug` - Manual trigger only (no auto-trigger on push)
+- `android-release` - Needs x5_keystore uploaded
+- `ios-release` - Needs Apple certs
+- `web-deploy` - Needs FIREBASE_TOKEN in environment variables
 
 ## Languages
 App supports 3 languages:
