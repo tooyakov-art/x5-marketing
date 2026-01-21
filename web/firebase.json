@@ -3,6 +3,7 @@
     "rules": "firestore.rules"
   },
   "hosting": {
+    "site": "x5-marketing-app",
     "public": "dist",
     "ignore": [
       "firebase.json",
