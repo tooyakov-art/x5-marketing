@@ -39,3 +39,6 @@ flutter/ios/*.p12
 # Misc
 *.local
 .cache/
+
+# Auto Claude data directory
+.auto-claude/

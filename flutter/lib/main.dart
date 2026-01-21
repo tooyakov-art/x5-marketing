@@ -39,7 +39,7 @@ class X5BridgeApp extends StatefulWidget {
 
 class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStateMixin {
   final InAppPurchase _inAppPurchase = InAppPurchase.instance;
-  late StreamSubscription<List<PurchaseDetails>> _subscription;
+  StreamSubscription<List<PurchaseDetails>>? _subscription;
   InAppWebViewController? _webViewController;
   bool _isLoading = true;
   late AnimationController _animationController;
@@ -108,7 +108,7 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
       _subscription = purchaseUpdated.listen((purchaseDetailsList) {
         _listenToPurchaseUpdated(purchaseDetailsList);
       }, onDone: () {
-        _subscription.cancel();
+        _subscription?.cancel();
       }, onError: (error) {
         print("💰 IAP STREAM ERROR: $error");
       });
@@ -119,11 +119,7 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
 
   @override
   void dispose() {
-    try {
-      _subscription.cancel();
-    } catch (e) {
-      print("⚠️ Subscription cancel error: $e");
-    }
+    _subscription?.cancel();
     _animationController.dispose();
     super.dispose();
   }
