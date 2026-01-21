@@ -15,6 +15,10 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
   const [minNum, setMinNum] = useState(1);
   const [maxNum, setMaxNum] = useState(100);
   const [isSpinning, setIsSpinning] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
+  const [tapPhase, setTapPhase] = useState<'tap' | 'spin' | 'result'>('tap');
+  const [showSparks, setShowSparks] = useState(false);
+  const tapRequired = 10; // Нужно тапнуть 10 раз
 
   // Dynamic Content Arrays inside component to use current 'language'
   const bannerStyles = [
@@ -117,6 +121,7 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
           setTimeout(() => {
             setRandomResult(finalResult);
             setIsSpinning(false);
+            setTapPhase('result');
             // Vibrate on mobile if supported
             if (navigator.vibrate) {
               navigator.vibrate([100, 50, 200]);
@@ -129,9 +134,39 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
     spin();
   };
 
+  // Reset and try again
+  const handleTryAgain = () => {
+    setTapCount(0);
+    setTapPhase('tap');
+    setRandomResult(null);
+  };
+
   const openRandomizer = () => {
     setShowRandomizer(true);
     setRandomResult(null);
+    setTapCount(0);
+    setTapPhase('tap');
+  };
+
+  // Tap to charge the randomizer!
+  const handleTap = () => {
+    if (tapPhase !== 'tap' || minNum >= maxNum) return;
+
+    const newCount = tapCount + 1;
+    setTapCount(newCount);
+    setShowSparks(true);
+    setTimeout(() => setShowSparks(false), 150);
+
+    // Vibrate on each tap
+    if (navigator.vibrate) {
+      navigator.vibrate(30);
+    }
+
+    // When enough taps - auto spin!
+    if (newCount >= tapRequired) {
+      setTapPhase('spin');
+      setTimeout(() => handleRandomize(), 300);
+    }
   };
 
   // Auto-scroll logic
@@ -444,15 +479,15 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
           </motion.button>
       </motion.div>
 
-      {/* Randomizer Modal - EXCITING VERSION */}
+      {/* Randomizer Modal - EXCITING TAP VERSION */}
       <AnimatePresence>
         {showRandomizer && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-6"
-            onClick={() => !isSpinning && setShowRandomizer(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"
+            onClick={() => !isSpinning && tapPhase !== 'spin' && setShowRandomizer(false)}
           >
             <motion.div
               initial={{ scale: 0.8, opacity: 0, y: 50 }}
@@ -460,130 +495,229 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
               exit={{ scale: 0.8, opacity: 0, y: 50 }}
               transition={{ type: 'spring', damping: 20 }}
               onClick={e => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl overflow-hidden"
+              className="bg-gradient-to-b from-slate-900 to-purple-950 rounded-3xl p-6 w-full max-w-sm shadow-2xl overflow-hidden border border-purple-500/30"
             >
-              {/* Header */}
-              <div className="text-center mb-6">
-                <motion.div
-                  animate={isSpinning ? {
-                    rotate: [0, 360],
-                    scale: [1, 1.1, 1]
-                  } : { rotate: 0 }}
-                  transition={{
-                    duration: 0.5,
-                    repeat: isSpinning ? Infinity : 0,
-                    ease: 'linear'
-                  }}
-                  className="w-20 h-20 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-purple-500/40"
-                >
-                  <Shuffle size={36} className="text-white" />
-                </motion.div>
-                <h2 className="text-2xl font-black text-slate-900 mb-1">{t('home_randomizer', language)}</h2>
-                <p className="text-sm text-slate-500">
-                  {language === 'ru' ? 'Испытай удачу!' : language === 'kz' ? 'Бақытыңды сына!' : 'Try your luck!'}
-                </p>
-              </div>
-
-              {/* Result Display - EXCITING */}
-              <motion.div
-                animate={isSpinning ? {
-                  scale: [1, 1.02, 1],
-                  boxShadow: ['0 0 0 0 rgba(139, 92, 246, 0)', '0 0 40px 10px rgba(139, 92, 246, 0.5)', '0 0 0 0 rgba(139, 92, 246, 0)']
-                } : {}}
-                transition={{ duration: 0.3, repeat: isSpinning ? Infinity : 0 }}
-                className="relative bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-3xl p-10 mb-6 overflow-hidden"
-              >
-                {/* Animated background particles */}
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
-                  className="absolute inset-0 opacity-30"
-                  style={{
-                    background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 70% 70%, rgba(255,255,255,0.2) 0%, transparent 50%)'
-                  }}
-                />
-
-                {/* Glow effect when spinning */}
-                {isSpinning && (
-                  <motion.div
-                    animate={{ opacity: [0.3, 0.7, 0.3] }}
-                    transition={{ duration: 0.5, repeat: Infinity }}
-                    className="absolute inset-0 bg-white/20 rounded-3xl"
-                  />
-                )}
-
-                <motion.p
-                  key={randomResult}
-                  initial={{ scale: 2, opacity: 0, rotateX: 90 }}
-                  animate={{ scale: 1, opacity: 1, rotateX: 0 }}
-                  transition={{ type: 'spring', damping: 15 }}
-                  className={`text-7xl font-black text-white text-center relative z-10 ${isSpinning ? 'blur-[1px]' : ''}`}
-                  style={{ textShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
-                >
-                  {randomResult ?? '?'}
-                </motion.p>
-              </motion.div>
-
-              {/* Range Inputs */}
-              <div className="flex gap-3 mb-6">
+              {/* Range Inputs - Always at top */}
+              <div className="flex gap-3 mb-4">
                 <div className="flex-1">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">
+                  <label className="text-[10px] font-bold text-purple-300/70 uppercase tracking-wide mb-1 block">
                     {language === 'ru' ? 'От' : language === 'kz' ? 'Бастап' : 'From'}
                   </label>
                   <input
                     type="number"
                     value={minNum}
                     onChange={e => setMinNum(parseInt(e.target.value) || 0)}
-                    disabled={isSpinning}
-                    className="w-full bg-slate-100 px-4 py-3 rounded-xl text-center text-lg font-bold text-slate-900 outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
+                    disabled={tapPhase !== 'tap'}
+                    className="w-full bg-black/40 border border-purple-500/30 px-4 py-2 rounded-xl text-center text-lg font-bold text-white outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
                   />
                 </div>
                 <div className="flex-1">
-                  <label className="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block">
+                  <label className="text-[10px] font-bold text-purple-300/70 uppercase tracking-wide mb-1 block">
                     {language === 'ru' ? 'До' : language === 'kz' ? 'Дейін' : 'To'}
                   </label>
                   <input
                     type="number"
                     value={maxNum}
                     onChange={e => setMaxNum(parseInt(e.target.value) || 0)}
-                    disabled={isSpinning}
-                    className="w-full bg-slate-100 px-4 py-3 rounded-xl text-center text-lg font-bold text-slate-900 outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
+                    disabled={tapPhase !== 'tap'}
+                    className="w-full bg-black/40 border border-purple-500/30 px-4 py-2 rounded-xl text-center text-lg font-bold text-white outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50"
                   />
                 </div>
               </div>
 
-              {/* Spin Button - BIG & EXCITING */}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                whileHover={{ scale: 1.02 }}
-                onClick={handleRandomize}
-                disabled={isSpinning || minNum >= maxNum}
-                className="w-full py-4 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl shadow-purple-500/30 disabled:opacity-50 relative overflow-hidden"
-              >
-                {isSpinning && (
-                  <motion.div
-                    animate={{ x: ['-100%', '100%'] }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  />
-                )}
+              {/* TAP PHASE - Big interactive area */}
+              {tapPhase === 'tap' && (
                 <motion.div
-                  animate={isSpinning ? { rotate: 360 } : {}}
-                  transition={{ duration: 0.5, repeat: isSpinning ? Infinity : 0, ease: 'linear' }}
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  className="relative"
                 >
-                  <Shuffle size={24} />
-                </motion.div>
-                <span>{isSpinning
-                  ? (language === 'ru' ? 'Крутится...' : language === 'kz' ? 'Айналуда...' : 'Spinning...')
-                  : (language === 'ru' ? '🎰 КРУТИТЬ!' : language === 'kz' ? '🎰 АЙНАЛДЫРУ!' : '🎰 SPIN!')
-                }</span>
-              </motion.button>
+                  {/* Tap Area */}
+                  <motion.button
+                    onPointerDown={handleTap}
+                    animate={showSparks ? { scale: [1, 0.95, 1] } : {}}
+                    transition={{ duration: 0.1 }}
+                    className="w-full aspect-square rounded-3xl bg-gradient-to-br from-violet-600 via-purple-700 to-fuchsia-800 flex flex-col items-center justify-center relative overflow-hidden select-none touch-none"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                  >
+                    {/* Animated rings */}
+                    <motion.div
+                      animate={{ scale: [1, 1.5], opacity: [0.5, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="absolute w-40 h-40 rounded-full border-4 border-white/30"
+                    />
+                    <motion.div
+                      animate={{ scale: [1, 1.8], opacity: [0.3, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.5 }}
+                      className="absolute w-40 h-40 rounded-full border-4 border-white/20"
+                    />
 
-              {/* Close hint */}
+                    {/* Spark effect on tap */}
+                    <AnimatePresence>
+                      {showSparks && (
+                        <>
+                          {[...Array(8)].map((_, i) => (
+                            <motion.div
+                              key={i}
+                              initial={{ scale: 0, x: 0, y: 0 }}
+                              animate={{
+                                scale: [0, 1, 0],
+                                x: Math.cos(i * 45 * Math.PI / 180) * 80,
+                                y: Math.sin(i * 45 * Math.PI / 180) * 80,
+                              }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="absolute w-3 h-3 bg-yellow-400 rounded-full shadow-lg shadow-yellow-400/50"
+                            />
+                          ))}
+                        </>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Center icon */}
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        rotate: tapCount * 36
+                      }}
+                      transition={{ duration: 0.3 }}
+                      className="w-24 h-24 bg-white/20 backdrop-blur rounded-full flex items-center justify-center mb-4"
+                    >
+                      <Gift size={48} className="text-white" />
+                    </motion.div>
+
+                    {/* Tap counter */}
+                    <motion.div
+                      key={tapCount}
+                      initial={{ scale: 1.5 }}
+                      animate={{ scale: 1 }}
+                      className="text-5xl font-black text-white mb-2"
+                      style={{ textShadow: '0 0 30px rgba(255,255,255,0.5)' }}
+                    >
+                      {tapCount}/{tapRequired}
+                    </motion.div>
+
+                    <p className="text-lg font-bold text-white/80">
+                      {language === 'ru' ? '👆 ТАПАЙ!' : language === 'kz' ? '👆 БАС!' : '👆 TAP!'}
+                    </p>
+
+                    {/* Progress bar */}
+                    <div className="absolute bottom-4 left-4 right-4 h-2 bg-black/30 rounded-full overflow-hidden">
+                      <motion.div
+                        animate={{ width: `${(tapCount / tapRequired) * 100}%` }}
+                        className="h-full bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 rounded-full"
+                        style={{ boxShadow: '0 0 20px rgba(255,165,0,0.7)' }}
+                      />
+                    </div>
+                  </motion.button>
+
+                  <p className="text-center text-xs text-purple-300/60 mt-3">
+                    {language === 'ru' ? 'Нажимай быстрее!' : language === 'kz' ? 'Тезірек бас!' : 'Tap faster!'}
+                  </p>
+                </motion.div>
+              )}
+
+              {/* SPIN PHASE - Slot machine effect */}
+              {(tapPhase === 'spin' || tapPhase === 'result') && (
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="relative"
+                >
+                  {/* Result Display */}
+                  <motion.div
+                    animate={isSpinning ? {
+                      scale: [1, 1.02, 1],
+                      boxShadow: ['0 0 0 0 rgba(168, 85, 247, 0)', '0 0 60px 20px rgba(168, 85, 247, 0.6)', '0 0 0 0 rgba(168, 85, 247, 0)']
+                    } : {}}
+                    transition={{ duration: 0.2, repeat: isSpinning ? Infinity : 0 }}
+                    className="relative bg-black/50 rounded-3xl p-8 mb-4 overflow-hidden border-2 border-purple-500/50"
+                  >
+                    {/* Slot machine style background */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-purple-900/50 via-transparent to-purple-900/50" />
+
+                    {/* Flying numbers background when spinning */}
+                    {isSpinning && (
+                      <div className="absolute inset-0 overflow-hidden">
+                        {[...Array(10)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            animate={{ y: [-50, 300] }}
+                            transition={{
+                              duration: 0.5,
+                              repeat: Infinity,
+                              delay: i * 0.1,
+                              ease: 'linear'
+                            }}
+                            className="absolute text-4xl font-black text-purple-500/20"
+                            style={{ left: `${10 + i * 9}%` }}
+                          >
+                            {Math.floor(Math.random() * 100)}
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Main number */}
+                    <motion.p
+                      key={randomResult}
+                      initial={{ scale: 2, opacity: 0, y: isSpinning ? -100 : 0 }}
+                      animate={{ scale: 1, opacity: 1, y: 0 }}
+                      transition={{ type: 'spring', damping: 15 }}
+                      className={`text-8xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-purple-200 text-center relative z-10 ${isSpinning ? 'blur-[2px]' : ''}`}
+                      style={{ textShadow: '0 0 40px rgba(168,85,247,0.8)' }}
+                    >
+                      {randomResult ?? '?'}
+                    </motion.p>
+
+                    {/* Winner glow on result */}
+                    {tapPhase === 'result' && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: [0, 1, 0] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        className="absolute inset-0 bg-gradient-to-t from-yellow-500/20 via-transparent to-transparent"
+                      />
+                    )}
+                  </motion.div>
+
+                  {/* Status text */}
+                  <motion.p
+                    animate={isSpinning ? { opacity: [0.5, 1, 0.5] } : {}}
+                    transition={{ duration: 0.5, repeat: isSpinning ? Infinity : 0 }}
+                    className="text-center text-lg font-bold text-purple-300 mb-4"
+                  >
+                    {isSpinning
+                      ? (language === 'ru' ? '🎰 Крутится...' : language === 'kz' ? '🎰 Айналуда...' : '🎰 Spinning...')
+                      : (language === 'ru' ? '🎉 ПОБЕДИТЕЛЬ!' : language === 'kz' ? '🎉 ЖЕҢІМПАЗ!' : '🎉 WINNER!')}
+                  </motion.p>
+
+                  {/* Try Again button */}
+                  {tapPhase === 'result' && (
+                    <motion.button
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleTryAgain}
+                      className="w-full py-4 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl shadow-purple-500/30"
+                    >
+                      <Shuffle size={24} />
+                      <span>{language === 'ru' ? 'ЕЩЁ РАЗ!' : language === 'kz' ? 'ТАҒЫ!' : 'AGAIN!'}</span>
+                    </motion.button>
+                  )}
+                </motion.div>
+              )}
+
+              {/* Close button */}
               {!isSpinning && (
-                <p className="text-center text-xs text-slate-400 mt-4">
-                  {language === 'ru' ? 'Нажмите вне окна чтобы закрыть' : 'Tap outside to close'}
-                </p>
+                <motion.button
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  onClick={() => setShowRandomizer(false)}
+                  className="w-full mt-3 py-2 text-purple-400/60 text-sm font-medium"
+                >
+                  {language === 'ru' ? 'Закрыть' : language === 'kz' ? 'Жабу' : 'Close'}
+                </motion.button>
               )}
             </motion.div>
           </motion.div>
