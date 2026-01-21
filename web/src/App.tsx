@@ -883,110 +883,81 @@ function App() {
 
                     </div>
 
-                    {/* MODERN TAB BAR with Central Action Button */}
+                    {/* MODERN TAB BAR - Light & Clean */}
                     {isTabBarVisible && platform !== 'ios' && ['home', 'profile', 'courses', 'hire', 'chats_list'].includes(currentView) && (
-                        <div className="absolute bottom-0 left-0 w-full z-40 md:hidden pointer-events-none pb-6 px-4">
+                        <div className="absolute bottom-0 left-0 w-full z-40 md:hidden pointer-events-none pb-4 px-4">
                             <motion.div
                                 initial={{ y: 100, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{ type: 'spring', damping: 20 }}
                                 className="pointer-events-auto"
                             >
-                                <div className="relative flex items-center justify-between px-6 py-3 rounded-[28px] bg-slate-900/95 backdrop-blur-2xl border border-white/10 shadow-2xl shadow-black/40">
+                                <div className="relative flex items-center justify-around px-2 py-2 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200/50 shadow-lg shadow-slate-900/10">
 
-                                    {/* Left side tabs */}
-                                    <div className="flex items-center gap-1">
-                                        <motion.button
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={() => handleNavigate('home')}
-                                            className="relative w-12 h-12 rounded-2xl flex flex-col items-center justify-center"
-                                        >
-                                            {currentView === 'home' && (
-                                                <motion.div
-                                                    layoutId="tabIndicator"
-                                                    className="absolute inset-0 bg-white/15 rounded-2xl"
-                                                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                                />
-                                            )}
-                                            <Home size={22} className={currentView === 'home' ? 'text-white' : 'text-slate-500'} />
-                                            {currentView === 'home' && (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="absolute -bottom-0.5 w-1 h-1 bg-white rounded-full"
-                                                />
-                                            )}
-                                        </motion.button>
+                                    <motion.button
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => handleNavigate('home')}
+                                        className="relative w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1"
+                                    >
+                                        {currentView === 'home' && (
+                                            <motion.div
+                                                layoutId="tabIndicator"
+                                                className="absolute inset-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl"
+                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                                            />
+                                        )}
+                                        <Home size={20} className={`relative z-10 ${currentView === 'home' ? 'text-white' : 'text-slate-400'}`} />
+                                        <span className={`text-[10px] font-semibold relative z-10 ${currentView === 'home' ? 'text-white' : 'text-slate-400'}`}>Главная</span>
+                                    </motion.button>
 
-                                        <motion.button
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={() => handleNavigate('courses')}
-                                            className="relative w-12 h-12 rounded-2xl flex flex-col items-center justify-center"
-                                        >
-                                            {currentView === 'courses' && (
-                                                <motion.div
-                                                    layoutId="tabIndicator"
-                                                    className="absolute inset-0 bg-white/15 rounded-2xl"
-                                                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                                />
-                                            )}
-                                            <GraduationCap size={22} className={currentView === 'courses' ? 'text-white' : 'text-slate-500'} />
-                                            {currentView === 'courses' && (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="absolute -bottom-0.5 w-1 h-1 bg-white rounded-full"
-                                                />
-                                            )}
-                                        </motion.button>
-                                    </div>
+                                    <motion.button
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => handleNavigate('courses')}
+                                        className="relative w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1"
+                                    >
+                                        {currentView === 'courses' && (
+                                            <motion.div
+                                                layoutId="tabIndicator"
+                                                className="absolute inset-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl"
+                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                                            />
+                                        )}
+                                        <GraduationCap size={20} className={`relative z-10 ${currentView === 'courses' ? 'text-white' : 'text-slate-400'}`} />
+                                        <span className={`text-[10px] font-semibold relative z-10 ${currentView === 'courses' ? 'text-white' : 'text-slate-400'}`}>Курсы</span>
+                                    </motion.button>
 
-                                    {/* Right side tabs */}
-                                    <div className="flex items-center gap-1">
-                                        <motion.button
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={() => handleNavigate('hire')}
-                                            className="relative w-12 h-12 rounded-2xl flex flex-col items-center justify-center"
-                                        >
-                                            {currentView === 'hire' && (
-                                                <motion.div
-                                                    layoutId="tabIndicator"
-                                                    className="absolute inset-0 bg-white/15 rounded-2xl"
-                                                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                                />
-                                            )}
-                                            <Briefcase size={22} className={currentView === 'hire' ? 'text-white' : 'text-slate-500'} />
-                                            {currentView === 'hire' && (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="absolute -bottom-0.5 w-1 h-1 bg-white rounded-full"
-                                                />
-                                            )}
-                                        </motion.button>
+                                    <motion.button
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => handleNavigate('hire')}
+                                        className="relative w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1"
+                                    >
+                                        {currentView === 'hire' && (
+                                            <motion.div
+                                                layoutId="tabIndicator"
+                                                className="absolute inset-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl"
+                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                                            />
+                                        )}
+                                        <Briefcase size={20} className={`relative z-10 ${currentView === 'hire' ? 'text-white' : 'text-slate-400'}`} />
+                                        <span className={`text-[10px] font-semibold relative z-10 ${currentView === 'hire' ? 'text-white' : 'text-slate-400'}`}>Биржа</span>
+                                    </motion.button>
 
-                                        <motion.button
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={() => handleNavigate('profile')}
-                                            className="relative w-12 h-12 rounded-2xl flex flex-col items-center justify-center"
-                                        >
-                                            {currentView === 'profile' && (
-                                                <motion.div
-                                                    layoutId="tabIndicator"
-                                                    className="absolute inset-0 bg-white/15 rounded-2xl"
-                                                    transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                                />
-                                            )}
-                                            <UserIcon size={22} className={currentView === 'profile' ? 'text-white' : 'text-slate-500'} />
-                                            {currentView === 'profile' && (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="absolute -bottom-0.5 w-1 h-1 bg-white rounded-full"
-                                                />
-                                            )}
-                                        </motion.button>
-                                    </div>
+                                    <motion.button
+                                        whileTap={{ scale: 0.9 }}
+                                        onClick={() => handleNavigate('profile')}
+                                        className="relative w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1"
+                                    >
+                                        {currentView === 'profile' && (
+                                            <motion.div
+                                                layoutId="tabIndicator"
+                                                className="absolute inset-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl"
+                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                                            />
+                                        )}
+                                        <UserIcon size={20} className={`relative z-10 ${currentView === 'profile' ? 'text-white' : 'text-slate-400'}`} />
+                                        <span className={`text-[10px] font-semibold relative z-10 ${currentView === 'profile' ? 'text-white' : 'text-slate-400'}`}>Профиль</span>
+                                    </motion.button>
+
                                 </div>
                             </motion.div>
                         </div>
