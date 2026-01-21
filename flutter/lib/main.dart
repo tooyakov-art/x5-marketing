@@ -14,26 +14,32 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:flutter_windowmanager_plus/flutter_windowmanager_plus.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  // Wrap everything in error handling
+  runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase with error handling
-  try {
-    await Firebase.initializeApp();
-    print("✅ Firebase initialized successfully");
-  } catch (e) {
-    print("⚠️ Firebase init error (may be normal on web): $e");
-  }
+    // Initialize Firebase with error handling
+    try {
+      await Firebase.initializeApp();
+      print("✅ Firebase initialized successfully");
+    } catch (e) {
+      print("⚠️ Firebase init error (may be normal on web): $e");
+    }
 
-  // Catch any unhandled Flutter errors
-  FlutterError.onError = (FlutterErrorDetails details) {
-    print("❌ Flutter error: ${details.exception}");
-    FlutterError.presentError(details);
-  };
+    // Catch any unhandled Flutter errors
+    FlutterError.onError = (FlutterErrorDetails details) {
+      print("❌ Flutter error: ${details.exception}");
+      FlutterError.presentError(details);
+    };
 
-  runApp(const MaterialApp(
-    home: X5BridgeApp(),
-    debugShowCheckedModeBanner: false,
-  ));
+    runApp(const MaterialApp(
+      home: X5BridgeApp(),
+      debugShowCheckedModeBanner: false,
+    ));
+  }, (error, stackTrace) {
+    print("❌ Unhandled error: $error");
+    print("Stack trace: $stackTrace");
+  });
 }
 
 class X5BridgeApp extends StatefulWidget {
@@ -44,7 +50,7 @@ class X5BridgeApp extends StatefulWidget {
 }
 
 class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStateMixin {
-  final InAppPurchase _inAppPurchase = InAppPurchase.instance;
+  InAppPurchase? _inAppPurchase;
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   InAppWebViewController? _webViewController;
   bool _isLoading = true;
@@ -115,13 +121,16 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
 
   Future<void> _initIAP() async {
     try {
-      final bool available = await _inAppPurchase.isAvailable();
+      // Lazy initialization of IAP
+      _inAppPurchase = InAppPurchase.instance;
+
+      final bool available = await _inAppPurchase!.isAvailable();
       if (!available) {
         print("⚠️ IAP not available on this device");
         return;
       }
 
-      final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase.purchaseStream;
+      final Stream<List<PurchaseDetails>> purchaseUpdated = _inAppPurchase!.purchaseStream;
       _subscription = purchaseUpdated.listen((purchaseDetailsList) {
         _listenToPurchaseUpdated(purchaseDetailsList);
       }, onDone: () {
@@ -129,8 +138,10 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
       }, onError: (error) {
         print("💰 IAP STREAM ERROR: $error");
       });
-    } catch (e) {
+      print("✅ IAP initialized successfully");
+    } catch (e, stackTrace) {
       print("⚠️ IAP initialization error: $e");
+      print("Stack trace: $stackTrace");
     }
   }
 
@@ -162,7 +173,7 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
           
           // 1. Завершаем транзакцию (ОБЯЗАТЕЛЬНО для Apple)
           if (purchaseDetails.pendingCompletePurchase) {
-             await _inAppPurchase.completePurchase(purchaseDetails);
+             await _inAppPurchase?.completePurchase(purchaseDetails);
           }
           
           // 2. Уведомляем Веб Сайт (вызов JS)
@@ -180,7 +191,14 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
 
   // 🚀 ЗАПУСК ПОКУПКИ (Вызывается из React)
   Future<void> _buyProduct(String productId) async {
-    final bool available = await _inAppPurchase.isAvailable();
+    if (_inAppPurchase == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("⚠️ Магазин не инициализирован")),
+      );
+      return;
+    }
+
+    final bool available = await _inAppPurchase!.isAvailable();
     if (!available) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("⚠️ Магазин недоступен")),
@@ -190,10 +208,10 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
 
     // Defining supported product IDs for reference/validation
     const Set<String> _kIds = <String>{'x5_pro_monthly', 'x5_pro_yearly', 'x5_credits_1000'};
-    
+
     // Explicitly add the requested product to the query set
-    final Set<String> ids = {productId}; 
-    final ProductDetailsResponse response = await _inAppPurchase.queryProductDetails(ids);
+    final Set<String> ids = {productId};
+    final ProductDetailsResponse response = await _inAppPurchase!.queryProductDetails(ids);
 
     if (response.notFoundIDs.isNotEmpty) {
        print("❌ Product not found: ${response.notFoundIDs}");
@@ -211,20 +229,27 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
       // Consumable: Can be purchased multiple times (e.g., Credits)
       // autoConsume: true is default for buyConsumable on Android, but handled manually via completePurchase on iOS usually.
       // flutter_inapp_purchase documentation suggests using buyConsumable for consumables.
-      _inAppPurchase.buyConsumable(purchaseParam: purchaseParam);
+      _inAppPurchase!.buyConsumable(purchaseParam: purchaseParam);
     } else {
       // Non-Consumable or Subscription: One-time unlock or auto-renewing (e.g., Pro Plan)
-      _inAppPurchase.buyNonConsumable(purchaseParam: purchaseParam);
+      _inAppPurchase!.buyNonConsumable(purchaseParam: purchaseParam);
     }
   }
 
   // ♻️ ВОССТАНОВЛЕНИЕ ПОКУПОК
   Future<void> _restorePurchases() async {
+    if (_inAppPurchase == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("⚠️ Магазин не инициализирован")),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("⏳ Восстановление покупок...")),
     );
     try {
-      await _inAppPurchase.restorePurchases();
+      await _inAppPurchase!.restorePurchases();
       // Note: restoration results come through the same _subscription stream
       // We rely on the stream listener to handle the 'restored' status.
     } catch (e) {

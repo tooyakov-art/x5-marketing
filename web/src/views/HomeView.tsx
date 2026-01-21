@@ -189,29 +189,6 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
         </div>
       </motion.div>
 
-      {/* Pro Banner (if free user) */}
-      {user?.plan === 'free' && (
-        <motion.button
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={() => onNavigate && onNavigate('paywall')}
-          className="mb-5 relative rounded-2xl overflow-hidden bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-4 shadow-xl shadow-purple-500/20"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-10 translate-x-10" />
-          <div className="flex items-center gap-3 relative z-10">
-            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-              <Crown size={24} className="text-yellow-300" />
-            </div>
-            <div className="flex-1 text-left">
-              <h3 className="text-sm font-bold text-white">X5 Pro</h3>
-              <p className="text-xs text-white/70">{t('paywall_trial', language)}</p>
-            </div>
-            <ArrowRight size={20} className="text-white/60" />
-          </div>
-        </motion.button>
-      )}
-
       {/* BIG PHOTO LAB BANNER - Swiping Enabled */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

@@ -941,21 +941,6 @@ function App() {
                                         </motion.button>
                                     </div>
 
-                                    {/* Central Action Button */}
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        whileHover={{ scale: 1.05 }}
-                                        onClick={() => handleNavigate('all_tech')}
-                                        className="absolute left-1/2 -translate-x-1/2 -top-5 w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 flex items-center justify-center shadow-xl shadow-purple-500/40 border-4 border-slate-900"
-                                    >
-                                        <motion.div
-                                            animate={{ rotate: 360 }}
-                                            transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
-                                            className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                                        />
-                                        <Sparkles size={26} className="text-white relative z-10" />
-                                    </motion.button>
-
                                     {/* Right side tabs */}
                                     <div className="flex items-center gap-1">
                                         <motion.button
