@@ -1,0 +1,9 @@
+{
+  "appId": "com.x5pro.app",
+  "appName": "X5 Marketing",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}

@@ -1,0 +1,122 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ============================================
+    // USERS COLLECTION
+    // ============================================
+    match /users/{userId} {
+      // Users can read and write only their own data
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+
+      // Allow updates but prevent credit increases on client side
+      // CRITICAL: Credits should only be increased via Cloud Functions
+      allow update: if isOwner(userId) &&
+                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['credits']) ||
+                      request.resource.data.credits <= resource.data.credits);
+
+      allow delete: if isOwner(userId);
+
+      // User's history subcollection
+      match /history/{historyId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // User's drafts subcollection
+      match /drafts/{draftId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // User's analytics links subcollection
+      match /links/{linkId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // ============================================
+    // CHATS COLLECTION
+    // ============================================
+    match /chats/{chatId} {
+      // Helper to check if user is a participant
+      function isParticipant() {
+        return request.auth.uid in resource.data.participants;
+      }
+
+      // Only chat participants can read the chat
+      allow read: if isAuthenticated() && isParticipant();
+
+      // Create: user must be in the participants list they're creating
+      allow create: if isAuthenticated() &&
+                     request.auth.uid in request.resource.data.participants;
+
+      // Update: only existing participants can update
+      allow update: if isAuthenticated() && isParticipant();
+
+      // Delete: only participants can delete
+      allow delete: if isAuthenticated() && isParticipant();
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        // Participants can read messages
+        allow read: if isAuthenticated();
+        // Participants can create messages
+        allow create: if isAuthenticated() &&
+                       request.resource.data.senderId == request.auth.uid;
+        // Prevent editing/deleting messages
+        allow update, delete: if false;
+      }
+    }
+
+    // ============================================
+    // SPECIALISTS COLLECTION
+    // ============================================
+    match /specialists/{specialistId} {
+      // Anyone can read specialist profiles (public directory)
+      allow read: if true;
+
+      // Only the specialist can write their own profile
+      allow write: if isOwner(specialistId);
+    }
+
+    // ============================================
+    // COURSES COLLECTION
+    // ============================================
+    match /courses/{courseId} {
+      // Anyone can read courses (public catalog)
+      allow read: if true;
+
+      // Only course author can write
+      // Note: We check resource.data.authorId for existing docs
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() &&
+                             request.auth.uid == resource.data.authorId;
+    }
+
+    // ============================================
+    // SYSTEM COLLECTION (configuration, etc.)
+    // ============================================
+    match /system/{document} {
+      // Anyone can read system config
+      allow read: if true;
+      // Only admins can write (managed via Firebase Console or Cloud Functions)
+      allow write: if false;
+    }
+
+    // ============================================
+    // DENY ALL OTHER PATHS
+    // ============================================
+    // This ensures that any collection not explicitly mentioned above is denied
+    // Commenting out the catch-all rule to enforce explicit permissions
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "X5",
+  "description": "Elite AI assistant for contracts and creative generation.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
