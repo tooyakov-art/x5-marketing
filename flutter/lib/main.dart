@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
-import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -20,9 +19,16 @@ void main() async {
   // Initialize Firebase with error handling
   try {
     await Firebase.initializeApp();
+    print("✅ Firebase initialized successfully");
   } catch (e) {
     print("⚠️ Firebase init error (may be normal on web): $e");
   }
+
+  // Catch any unhandled Flutter errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    print("❌ Flutter error: ${details.exception}");
+    FlutterError.presentError(details);
+  };
 
   runApp(const MaterialApp(
     home: X5BridgeApp(),
@@ -48,24 +54,28 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
 
   // 🛡️ SCREEN PROTECTION (только Android)
   Future<void> _enableScreenProtection() async {
-    if (Platform.isAndroid && !_screenProtectionEnabled) {
-      try {
-        await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
-        _screenProtectionEnabled = true;
-      } catch (e) {
-        print("⚠️ Screen protection enable error: $e");
-      }
+    if (!Platform.isAndroid || _screenProtectionEnabled) return;
+
+    try {
+      await FlutterWindowManagerPlus.addFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      _screenProtectionEnabled = true;
+      print("🛡️ Screen protection enabled");
+    } catch (e, stackTrace) {
+      print("⚠️ Screen protection enable error: $e");
+      print("Stack trace: $stackTrace");
     }
   }
 
   Future<void> _disableScreenProtection() async {
-    if (Platform.isAndroid && _screenProtectionEnabled) {
-      try {
-        await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
-        _screenProtectionEnabled = false;
-      } catch (e) {
-        print("⚠️ Screen protection disable error: $e");
-      }
+    if (!Platform.isAndroid || !_screenProtectionEnabled) return;
+
+    try {
+      await FlutterWindowManagerPlus.clearFlags(FlutterWindowManagerPlus.FLAG_SECURE);
+      _screenProtectionEnabled = false;
+      print("🛡️ Screen protection disabled");
+    } catch (e, stackTrace) {
+      print("⚠️ Screen protection disable error: $e");
+      print("Stack trace: $stackTrace");
     }
   }
 
@@ -73,9 +83,23 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
   void initState() {
     super.initState();
 
+    // 🌀 ANIMATION SETUP (safe to do in initState)
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+    _fadeAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(_animationController);
+
+    // 🚀 Defer platform-specific initialization to after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initPlatformState();
+    });
+  }
+
+  Future<void> _initPlatformState() async {
     // 🖥️ FULLSCREEN MODE (Immersive) - wrapped in try-catch
     try {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
       SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         systemNavigationBarColor: Colors.transparent,
@@ -85,15 +109,8 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
       print("⚠️ SystemChrome error: $e");
     }
 
-    // 🌀 ANIMATION SETUP
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-    _fadeAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(_animationController);
-
     // 💸 IAP LISTENER - wrapped in try-catch
-    _initIAP();
+    await _initIAP();
   }
 
   Future<void> _initIAP() async {
