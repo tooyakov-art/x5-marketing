@@ -90,23 +90,43 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
     { id: 'all_tech', label: t('tool_all', language), icon: LayoutGrid, gradient: 'from-slate-600 to-slate-800' },
   ];
 
-  // Randomizer number generator for giveaways
+  // Randomizer number generator for giveaways - EXCITING VERSION
   const handleRandomize = () => {
     if (minNum >= maxNum) return;
     setIsSpinning(true);
     setRandomResult(null);
 
-    // Animate through random numbers
+    const finalResult = Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum;
     let count = 0;
-    const interval = setInterval(() => {
+    const totalSpins = 30; // More spins for longer suspense
+
+    const spin = () => {
+      // Start fast, slow down exponentially (like a slot machine)
+      const progress = count / totalSpins;
+      const delay = 50 + Math.pow(progress, 2) * 400; // 50ms -> 450ms
+
       setRandomResult(Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum);
       count++;
-      if (count > 15) {
-        clearInterval(interval);
-        setRandomResult(Math.floor(Math.random() * (maxNum - minNum + 1)) + minNum);
-        setIsSpinning(false);
+
+      if (count < totalSpins) {
+        setTimeout(spin, delay);
+      } else {
+        // Final reveal with a pause for drama
+        setTimeout(() => {
+          setRandomResult(null);
+          setTimeout(() => {
+            setRandomResult(finalResult);
+            setIsSpinning(false);
+            // Vibrate on mobile if supported
+            if (navigator.vibrate) {
+              navigator.vibrate([100, 50, 200]);
+            }
+          }, 200);
+        }, 300);
       }
-    }, 80);
+    };
+
+    spin();
   };
 
   const openRandomizer = () => {
@@ -288,22 +308,19 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
         <motion.button
           whileTap={{ scale: 0.95 }}
           onClick={() => onNavigate && onNavigate('whatsapp_bot')}
-          className="relative h-28 rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-500 to-green-600 p-4 shadow-xl shadow-green-500/20 text-left"
+          className="relative h-28 rounded-2xl overflow-hidden bg-white p-4 shadow-lg shadow-slate-200/50 border border-slate-100 text-left"
         >
-          <motion.div
-            className="absolute -right-4 -bottom-4 w-20 h-20 bg-white/10 rounded-full"
-          />
           <div className="relative z-10 h-full flex flex-col justify-between">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg">
               <Bot size={20} className="text-white" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">{t('home_whatsapp_bot', language)}</h3>
-              <p className="text-[10px] text-white/70 font-medium">{t('home_whatsapp_bot_desc', language)}</p>
+              <h3 className="text-sm font-bold text-slate-900">{t('home_whatsapp_bot', language)}</h3>
+              <p className="text-[10px] text-slate-400 font-medium">{t('home_whatsapp_bot_desc', language)}</p>
             </div>
           </div>
           {/* New Badge */}
-          <div className="absolute top-3 right-3 bg-yellow-400 text-yellow-900 text-[9px] font-black px-2 py-0.5 rounded-full">
+          <div className="absolute top-3 right-3 bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full">
             NEW
           </div>
         </motion.button>
@@ -427,48 +444,81 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
           </motion.button>
       </motion.div>
 
-      {/* Randomizer Modal */}
+      {/* Randomizer Modal - EXCITING VERSION */}
       <AnimatePresence>
         {showRandomizer && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6"
-            onClick={() => setShowRandomizer(false)}
+            className="fixed inset-0 bg-black/70 backdrop-blur-md z-50 flex items-center justify-center p-6"
+            onClick={() => !isSpinning && setShowRandomizer(false)}
           >
             <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
+              initial={{ scale: 0.8, opacity: 0, y: 50 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 50 }}
+              transition={{ type: 'spring', damping: 20 }}
               onClick={e => e.stopPropagation()}
-              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl"
+              className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl overflow-hidden"
             >
               {/* Header */}
               <div className="text-center mb-6">
                 <motion.div
-                  animate={isSpinning ? { rotate: 360 } : { rotate: 0 }}
-                  transition={{ duration: 0.5, repeat: isSpinning ? Infinity : 0, ease: 'linear' }}
-                  className="w-16 h-16 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-purple-500/30"
+                  animate={isSpinning ? {
+                    rotate: [0, 360],
+                    scale: [1, 1.1, 1]
+                  } : { rotate: 0 }}
+                  transition={{
+                    duration: 0.5,
+                    repeat: isSpinning ? Infinity : 0,
+                    ease: 'linear'
+                  }}
+                  className="w-20 h-20 bg-gradient-to-br from-violet-500 via-purple-500 to-fuchsia-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-purple-500/40"
                 >
-                  <Shuffle size={32} className="text-white" />
+                  <Shuffle size={36} className="text-white" />
                 </motion.div>
-                <h2 className="text-xl font-black text-slate-900 mb-1">{t('home_randomizer', language)}</h2>
+                <h2 className="text-2xl font-black text-slate-900 mb-1">{t('home_randomizer', language)}</h2>
                 <p className="text-sm text-slate-500">
-                  {language === 'ru' ? 'Выбери случайное число' : language === 'kz' ? 'Кездейсоқ сан таңдаңыз' : 'Pick a random number'}
+                  {language === 'ru' ? 'Испытай удачу!' : language === 'kz' ? 'Бақытыңды сына!' : 'Try your luck!'}
                 </p>
               </div>
 
-              {/* Result Display */}
+              {/* Result Display - EXCITING */}
               <motion.div
-                className="relative bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-8 mb-6 overflow-hidden"
+                animate={isSpinning ? {
+                  scale: [1, 1.02, 1],
+                  boxShadow: ['0 0 0 0 rgba(139, 92, 246, 0)', '0 0 40px 10px rgba(139, 92, 246, 0.5)', '0 0 0 0 rgba(139, 92, 246, 0)']
+                } : {}}
+                transition={{ duration: 0.3, repeat: isSpinning ? Infinity : 0 }}
+                className="relative bg-gradient-to-br from-violet-500 via-purple-600 to-fuchsia-600 rounded-3xl p-10 mb-6 overflow-hidden"
               >
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1),transparent)]" />
+                {/* Animated background particles */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                  className="absolute inset-0 opacity-30"
+                  style={{
+                    background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, transparent 50%), radial-gradient(circle at 70% 70%, rgba(255,255,255,0.2) 0%, transparent 50%)'
+                  }}
+                />
+
+                {/* Glow effect when spinning */}
+                {isSpinning && (
+                  <motion.div
+                    animate={{ opacity: [0.3, 0.7, 0.3] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                    className="absolute inset-0 bg-white/20 rounded-3xl"
+                  />
+                )}
+
                 <motion.p
                   key={randomResult}
-                  initial={{ scale: 1.5, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className="text-6xl font-black text-white text-center relative z-10"
+                  initial={{ scale: 2, opacity: 0, rotateX: 90 }}
+                  animate={{ scale: 1, opacity: 1, rotateX: 0 }}
+                  transition={{ type: 'spring', damping: 15 }}
+                  className={`text-7xl font-black text-white text-center relative z-10 ${isSpinning ? 'blur-[1px]' : ''}`}
+                  style={{ textShadow: '0 4px 20px rgba(0,0,0,0.3)' }}
                 >
                   {randomResult ?? '?'}
                 </motion.p>
@@ -484,7 +534,8 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
                     type="number"
                     value={minNum}
                     onChange={e => setMinNum(parseInt(e.target.value) || 0)}
-                    className="w-full bg-slate-100 px-4 py-3 rounded-xl text-center text-lg font-bold text-slate-900 outline-none focus:ring-2 focus:ring-violet-500"
+                    disabled={isSpinning}
+                    className="w-full bg-slate-100 px-4 py-3 rounded-xl text-center text-lg font-bold text-slate-900 outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
                   />
                 </div>
                 <div className="flex-1">
@@ -495,30 +546,45 @@ export const HomeView: React.FC<ViewProps> = ({ onNavigate, user, language = 'ru
                     type="number"
                     value={maxNum}
                     onChange={e => setMaxNum(parseInt(e.target.value) || 0)}
-                    className="w-full bg-slate-100 px-4 py-3 rounded-xl text-center text-lg font-bold text-slate-900 outline-none focus:ring-2 focus:ring-violet-500"
+                    disabled={isSpinning}
+                    className="w-full bg-slate-100 px-4 py-3 rounded-xl text-center text-lg font-bold text-slate-900 outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
                   />
                 </div>
               </div>
 
-              {/* Buttons */}
-              <div className="flex gap-3">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowRandomizer(false)}
-                  className="flex-1 py-3.5 bg-slate-100 text-slate-700 rounded-xl font-bold text-sm"
+              {/* Spin Button - BIG & EXCITING */}
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.02 }}
+                onClick={handleRandomize}
+                disabled={isSpinning || minNum >= maxNum}
+                className="w-full py-4 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl shadow-purple-500/30 disabled:opacity-50 relative overflow-hidden"
+              >
+                {isSpinning && (
+                  <motion.div
+                    animate={{ x: ['-100%', '100%'] }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  />
+                )}
+                <motion.div
+                  animate={isSpinning ? { rotate: 360 } : {}}
+                  transition={{ duration: 0.5, repeat: isSpinning ? Infinity : 0, ease: 'linear' }}
                 >
-                  {t('btn_back', language)}
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleRandomize}
-                  disabled={isSpinning || minNum >= maxNum}
-                  className="flex-1 py-3.5 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/30 disabled:opacity-50"
-                >
-                  <Shuffle size={16} />
-                  <span>{language === 'ru' ? 'Крутить' : language === 'kz' ? 'Айналдыру' : 'Spin'}</span>
-                </motion.button>
-              </div>
+                  <Shuffle size={24} />
+                </motion.div>
+                <span>{isSpinning
+                  ? (language === 'ru' ? 'Крутится...' : language === 'kz' ? 'Айналуда...' : 'Spinning...')
+                  : (language === 'ru' ? '🎰 КРУТИТЬ!' : language === 'kz' ? '🎰 АЙНАЛДЫРУ!' : '🎰 SPIN!')
+                }</span>
+              </motion.button>
+
+              {/* Close hint */}
+              {!isSpinning && (
+                <p className="text-center text-xs text-slate-400 mt-4">
+                  {language === 'ru' ? 'Нажмите вне окна чтобы закрыть' : 'Tap outside to close'}
+                </p>
+              )}
             </motion.div>
           </motion.div>
         )}
