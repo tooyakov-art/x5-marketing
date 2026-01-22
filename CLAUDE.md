@@ -144,6 +144,39 @@ flutter build apk --release  # Release APK
 - **Tab bar**: 4 buttons only (no center action button)
 - **HomeView**: No Pro banner at top (users access paywall via credits button)
 
+## Firebase & Auth Setup (REQUIRED)
+
+### Android Setup (Google Sign In + Google Pay/IAP)
+1. Go to [Firebase Console](https://console.firebase.google.com) > x5-marketing-app
+2. Project Settings > General > Android apps > Download `google-services.json`
+3. Replace `flutter/android/app/google-services.json` with downloaded file
+4. **For Google Sign In**: Go to Firebase Console > Authentication > Sign-in method > Enable Google
+5. **SHA-1 Fingerprint**: Run `cd flutter/android && ./gradlew signingReport` and add SHA-1 to Firebase Console
+
+### iOS Setup (Google Sign In + Apple Sign In + Apple Pay/IAP)
+1. Go to [Firebase Console](https://console.firebase.google.com) > x5-marketing-app
+2. Project Settings > General > iOS apps > Download `GoogleService-Info.plist`
+3. Replace `flutter/ios/Runner/GoogleService-Info.plist` with downloaded file
+4. **Update URL Scheme**: In `flutter/ios/Runner/Info.plist`, replace `YOUR_IOS_CLIENT_ID` with actual REVERSED_CLIENT_ID from GoogleService-Info.plist
+5. **Apple Sign In**: Enable in Apple Developer Portal > Certificates, Identifiers & Profiles > Identifiers > App ID > Sign In with Apple
+6. **IAP Products**: Create in App Store Connect > My Apps > X5 App > Features > In-App Purchases:
+   - `x5_pro_monthly` - Auto-renewable subscription ($19/month)
+   - `x5_pro_yearly` - Auto-renewable subscription ($199/year)
+   - `x5_credits_1000` - Consumable ($9)
+
+### Google Play IAP Setup (Android)
+1. Go to [Google Play Console](https://play.google.com/console)
+2. Select app > Monetize > Products > In-app products
+3. Create products:
+   - `x5_pro_monthly` - Subscription ($19/month)
+   - `x5_pro_yearly` - Subscription ($199/year)
+   - `x5_credits_1000` - Managed product ($9)
+
+### How Auth/Payments Work
+- **React (Web)** calls `sendToApp('authBridge', 'google')` or `sendToApp('payBridge', 'x5_pro_monthly')`
+- **Flutter** receives via JavaScript handlers and calls native `GoogleSignIn()` or `InAppPurchase`
+- **Success/Error** sent back to React via `window.onAppAuthSuccess()` / `window.onAppPaymentSuccess()`
+
 ## Known Issues / TODO
 - iOS build needs Apple Developer certificates
 - Release Android build needs keystore upload to Codemagic
