@@ -166,8 +166,8 @@ function App() {
         const isRightSwipe = distanceX < -minSwipeDistance;
 
         if (platform === 'ios') {
-            // Include chats_list for iOS users to access messages
-            const TABS: ViewState[] = ['home', 'courses', 'hire', 'chats_list', 'profile'];
+            // 4 tabs only: Home, Courses, Hire, Profile
+            const TABS: ViewState[] = ['home', 'courses', 'hire', 'profile'];
             const currentIndex = TABS.indexOf(currentView);
 
             if (currentIndex !== -1) {
@@ -1037,11 +1037,11 @@ function App() {
                         </div>
                     )}
 
-                    {/* iOS Page Indicator (Dots) */}
-                    {platform === 'ios' && isTabBarVisible && ['home', 'courses', 'hire', 'chats_list', 'profile'].includes(currentView) && (
+                    {/* iOS Page Indicator (Dots) - 4 tabs only */}
+                    {platform === 'ios' && isTabBarVisible && ['home', 'courses', 'hire', 'profile'].includes(currentView) && (
                         <div className="absolute bottom-0 left-0 w-full z-40 pb-6 pointer-events-none md:hidden">
                             <div className="flex items-center justify-center gap-2">
-                                {['home', 'courses', 'hire', 'chats_list', 'profile'].map((tab) => (
+                                {['home', 'courses', 'hire', 'profile'].map((tab) => (
                                     <motion.div
                                         key={tab}
                                         className={`rounded-full transition-all ${
@@ -1058,7 +1058,6 @@ function App() {
                                 {currentView === 'home' && 'Главная'}
                                 {currentView === 'courses' && 'Курсы'}
                                 {currentView === 'hire' && 'Биржа'}
-                                {currentView === 'chats_list' && 'Сообщения'}
                                 {currentView === 'profile' && 'Профиль'}
                             </p>
                         </div>

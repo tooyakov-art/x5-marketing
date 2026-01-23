@@ -193,10 +193,10 @@ flutter build apk --release  # Release APK
     - Throws error if insufficient credits
 
 23. **iOS Navigation Fix** (`web/src/App.tsx`)
-    - Was: Swipe navigation tabs didn't include chats, making it inaccessible
-    - Now: Added 'chats_list' to iOS swipeable tabs array
+    - iOS uses swipe navigation with 4 tabs only: home, courses, hire, profile
+    - NO chats in iOS swipe tabs (chats accessible via home screen)
     - Added page indicator dots at bottom of screen
-    - Order: home → courses → hire → chats_list → profile
+    - Order: home → courses → hire → profile
 
 24. **Video Generation Improvements** (`web/src/views/VideoGenView.tsx`)
     - Added credit confirmation dialog before generation (50 credits)
@@ -260,6 +260,30 @@ flutter build apk --release  # Release APK
 - `android-release` - Needs x5_keystore uploaded
 - `ios-release` - Needs Apple certs
 - `web-deploy` - Needs FIREBASE_TOKEN in environment variables
+
+## iOS Deployment - КРИТИЧЕСКИ ВАЖНО!
+
+### ⚠️ НИКОГДА НЕ СОЗДАВАТЬ НОВЫЙ РЕПОЗИТОРИЙ! ⚠️
+
+**Существует ГОТОВЫЙ репозиторий `5x-flutter` на GitHub!**
+
+Этот репозиторий уже полностью настроен:
+- ✅ Все Apple сертификаты подключены
+- ✅ Все пароли и ключи настроены
+- ✅ Codemagic CI/CD полностью сконфигурирован
+- ✅ App Store Connect API Key добавлен
+
+### Для iOS деплоя:
+1. Скопировать содержимое папки `flutter/` из этого репо
+2. Запушить в СУЩЕСТВУЮЩИЙ репозиторий `5x-flutter`
+3. Codemagic автоматически соберёт и задеплоит
+
+### НЕ ДЕЛАТЬ:
+- ❌ НЕ создавать новый Flutter репозиторий
+- ❌ НЕ настраивать Codemagic заново
+- ❌ НЕ генерировать новые сертификаты
+
+**Все Apple credentials привязаны к существующему `5x-flutter` репо!**
 
 ## Languages
 App supports 3 languages:
