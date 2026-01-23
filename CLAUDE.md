@@ -131,6 +131,14 @@ flutter build apk --release  # Release APK
 12. **Removed center sparkle button from tab bar** - now 4 buttons (Home, Courses, Hire, Profile)
 13. **Removed X5 Pro banner from HomeView** - was partially visible/cut off
 
+### Session 23 Jan 2025 - iOS App Store Fix + Auto-Deploy
+14. **Fixed iOS App Store validation error** - `com.googleusercontent.apps.YOUR_IOS_CLIENT_ID` placeholder was rejected
+    - Added `flutter/ios/Runner/GoogleService-Info.plist` with real Client ID
+    - Added `CFBundleURLTypes` in `Info.plist` with REVERSED_CLIENT_ID for Google Sign-In OAuth callback
+15. **Added auto-triggering for Codemagic builds** - now `ios-release` and `web-deploy` automatically run on push to `main`
+16. **User has Windows** - не macOS/Linux
+17. **gh CLI авторизован** на ПК пользователя (`tooyakov-art`)
+
 ## Critical Architecture Notes
 
 ### Flutter/Android
@@ -145,16 +153,22 @@ flutter build apk --release  # Release APK
 - **HomeView**: No Pro banner at top (users access paywall via credits button)
 
 ## Known Issues / TODO
-- iOS build needs Apple Developer certificates
 - Release Android build needs keystore upload to Codemagic
 - Video compression only works in browser (not in Flutter WebView)
 - **Android crash still being investigated** - if still crashes, check logcat for actual error
 
+## iOS Configuration (CRITICAL)
+- **GoogleService-Info.plist**: `flutter/ios/Runner/GoogleService-Info.plist`
+  - CLIENT_ID: `931639129066-drd4qhjo5pgki47itjup0dibft0a7i3f.apps.googleusercontent.com`
+  - BUNDLE_ID: `com.x5marketing.mobile`
+- **URL Schemes in Info.plist**: `com.googleusercontent.apps.931639129066-drd4qhjo5pgki47itjup0dibft0a7i3f`
+- **App Store Connect integration**: "X5 Marketing" in Codemagic
+
 ## Codemagic Workflows
-- `android-debug` - Manual trigger only (no auto-trigger on push)
-- `android-release` - Needs x5_keystore uploaded
-- `ios-release` - Needs Apple certs
-- `web-deploy` - Needs FIREBASE_TOKEN in environment variables
+- `android-debug` - Manual trigger only
+- `android-release` - Manual trigger, needs x5_keystore uploaded
+- `ios-release` - **AUTO on push to main**, deploys to TestFlight
+- `web-deploy` - **AUTO on push to main**, deploys to Firebase Hosting (needs FIREBASE_TOKEN)
 
 ## Languages
 App supports 3 languages:
