@@ -1,17 +1,63 @@
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, Bot, MessageCircle, Send, Sparkles, Zap, Check, Clock, Users, ArrowRight, Phone, Shield, BarChart3, Mic, Image, Smile, MoreVertical } from 'lucide-react';
+import { ChevronLeft, Bot, MessageCircle, Send, Sparkles, Zap, Check, Clock, Users, ArrowRight, Phone, Shield, BarChart3, Mic, Image, Smile, MoreVertical, Settings, Trash2 } from 'lucide-react';
 import { ViewProps } from '../types';
 import { t } from '../services/translations';
 import { motion, AnimatePresence } from 'framer-motion';
+import { db } from '../firebase';
+import { useToast } from '../components/Toast';
+
+interface WhatsAppBot {
+  id: string;
+  name: string;
+  businessType: string;
+  greeting: string;
+  rules: string;
+  status: 'pending' | 'active' | 'paused';
+  createdAt: string;
+  userId: string;
+}
 
 export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 'ru', onNavigate }) => {
+  const { showToast } = useToast();
   const [botName, setBotName] = useState('');
   const [businessType, setBusinessType] = useState('');
+  const [greeting, setGreeting] = useState('');
+  const [rules, setRules] = useState('');
   const [step, setStep] = useState(1);
   const [isCreating, setIsCreating] = useState(false);
   const [demoMessages, setDemoMessages] = useState<{text: string, isBot: boolean}[]>([]);
   const [showDemo, setShowDemo] = useState(false);
+  const [myBots, setMyBots] = useState<WhatsAppBot[]>([]);
+  const [loadingBots, setLoadingBots] = useState(true);
+
+  // Load user's existing bots
+  useEffect(() => {
+    if (!user?.id || user.isGuest) {
+      setLoadingBots(false);
+      return;
+    }
+
+    const unsubscribe = db.collection('whatsapp_bots')
+      .where('userId', '==', user.id)
+      .orderBy('createdAt', 'desc')
+      .onSnapshot(
+        (snapshot) => {
+          const bots = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as WhatsAppBot[];
+          setMyBots(bots);
+          setLoadingBots(false);
+        },
+        (error) => {
+          console.error('Error loading bots:', error);
+          setLoadingBots(false);
+        }
+      );
+
+    return () => unsubscribe();
+  }, [user?.id]);
 
   const features = [
     { icon: MessageCircle, title: language === 'ru' ? 'Мгновенные ответы' : 'Instant Replies', desc: language === 'ru' ? '24/7 без перерывов' : '24/7 non-stop', color: 'from-blue-500 to-cyan-500' },
@@ -61,10 +107,43 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
   const handleCreate = async () => {
     if (!botName.trim() || !businessType) return;
 
+    if (!user?.id || user.isGuest) {
+      showToast(language === 'ru' ? 'Войдите для создания бота' : 'Sign in to create a bot', 'warning');
+      return;
+    }
+
     setIsCreating(true);
-    await new Promise(r => setTimeout(r, 2500));
-    setIsCreating(false);
-    setStep(3);
+
+    try {
+      const botData: Omit<WhatsAppBot, 'id'> = {
+        name: botName.trim(),
+        businessType,
+        greeting: greeting.trim() || (language === 'ru' ? 'Здравствуйте! Чем могу помочь?' : 'Hello! How can I help you?'),
+        rules: rules.trim() || '',
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        userId: user.id
+      };
+
+      await db.collection('whatsapp_bots').add(botData);
+      showToast(language === 'ru' ? 'Бот создан!' : 'Bot created!', 'success');
+      setStep(3);
+    } catch (error) {
+      console.error('Error creating bot:', error);
+      showToast(language === 'ru' ? 'Ошибка создания бота' : 'Error creating bot', 'error');
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleDeleteBot = async (botId: string) => {
+    try {
+      await db.collection('whatsapp_bots').doc(botId).delete();
+      showToast(language === 'ru' ? 'Бот удален' : 'Bot deleted', 'success');
+    } catch (error) {
+      console.error('Error deleting bot:', error);
+      showToast(language === 'ru' ? 'Ошибка удаления' : 'Error deleting', 'error');
+    }
   };
 
   return (
@@ -277,6 +356,65 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
                 <Sparkles size={18} />
                 <span>{language === 'ru' ? 'Создать бота' : 'Create Bot'}</span>
               </motion.button>
+
+              {/* My Bots Section */}
+              {!loadingBots && myBots.length > 0 && (
+                <motion.div
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-8"
+                >
+                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-4">
+                    {language === 'ru' ? 'Мои боты' : 'My Bots'}
+                  </h3>
+                  <div className="space-y-3">
+                    {myBots.map((bot) => (
+                      <div key={bot.id} className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            bot.status === 'active' ? 'bg-emerald-500' : bot.status === 'paused' ? 'bg-gray-400' : 'bg-yellow-500'
+                          }`}>
+                            <Bot size={20} className="text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-bold text-gray-900">{bot.name}</h4>
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${
+                                bot.status === 'active' ? 'bg-emerald-500' : bot.status === 'paused' ? 'bg-gray-400' : 'bg-yellow-500'
+                              }`} />
+                              <span className={`text-xs font-medium ${
+                                bot.status === 'active' ? 'text-emerald-600' : bot.status === 'paused' ? 'text-gray-500' : 'text-yellow-600'
+                              }`}>
+                                {bot.status === 'active'
+                                  ? (language === 'ru' ? 'Активен' : 'Active')
+                                  : bot.status === 'paused'
+                                  ? (language === 'ru' ? 'Приостановлен' : 'Paused')
+                                  : (language === 'ru' ? 'Ожидает настройки' : 'Pending setup')
+                                }
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <motion.button
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleDeleteBot(bot.id)}
+                              className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center"
+                            >
+                              <Trash2 size={14} />
+                            </motion.button>
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-400">
+                          {businessTypes.find(t => t.id === bot.businessType)?.emoji} {businessTypes.find(t => t.id === bot.businessType)?.label}
+                          {' • '}
+                          {new Date(bot.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
           )}
 
@@ -317,7 +455,7 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
               </div>
 
               {/* Business Type */}
-              <div className="mb-6">
+              <div className="mb-5">
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 block">
                   {language === 'ru' ? 'Тип бизнеса' : 'Business Type'}
                 </label>
@@ -338,6 +476,34 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
                     </motion.button>
                   ))}
                 </div>
+              </div>
+
+              {/* Greeting Message */}
+              <div className="mb-5">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">
+                  {language === 'ru' ? 'Приветствие' : 'Greeting'} ({language === 'ru' ? 'опционально' : 'optional'})
+                </label>
+                <textarea
+                  value={greeting}
+                  onChange={e => setGreeting(e.target.value)}
+                  placeholder={language === 'ru' ? 'Здравствуйте! Чем могу помочь?' : 'Hello! How can I help you?'}
+                  rows={2}
+                  className="w-full bg-white p-4 rounded-2xl text-gray-900 placeholder-gray-400 border border-gray-200 outline-none focus:border-emerald-500 transition-colors shadow-sm resize-none"
+                />
+              </div>
+
+              {/* Response Rules */}
+              <div className="mb-6">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 block">
+                  {language === 'ru' ? 'Правила ответов' : 'Response Rules'} ({language === 'ru' ? 'опционально' : 'optional'})
+                </label>
+                <textarea
+                  value={rules}
+                  onChange={e => setRules(e.target.value)}
+                  placeholder={language === 'ru' ? 'Например: Отвечай дружелюбно, предлагай скидку 10%...' : 'e.g. Be friendly, offer 10% discount...'}
+                  rows={3}
+                  className="w-full bg-white p-4 rounded-2xl text-gray-900 placeholder-gray-400 border border-gray-200 outline-none focus:border-emerald-500 transition-colors shadow-sm resize-none"
+                />
               </div>
 
               {/* Buttons */}
