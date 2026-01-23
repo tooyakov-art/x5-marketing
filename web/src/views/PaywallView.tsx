@@ -1,15 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Zap, Crown, ShieldCheck, CheckCircle } from 'lucide-react';
+import { X, Check, Zap, Crown, ShieldCheck, CheckCircle, AlertTriangle } from 'lucide-react';
 import { sendToApp, isMobileApp } from '../utils/appBridge';
 import { NativeBridge } from '../services/nativeBridge';
 import { Platform, User } from '../types';
 import { t } from '../services/translations';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '../components/Toast';
 
-// Lemon Squeezy Checkout URLs
-const LEMON_SQUEEZY_YEARLY = 'https://x5ai.lemonsqueezy.com/buy/YOUR_YEARLY_PRODUCT_ID';
-const LEMON_SQUEEZY_MONTHLY = 'https://x5ai.lemonsqueezy.com/buy/YOUR_MONTHLY_PRODUCT_ID';
-const LEMON_SQUEEZY_CREDITS = 'https://x5ai.lemonsqueezy.com/buy/YOUR_CREDITS_PRODUCT_ID';
+// Lemon Squeezy Checkout URLs - Configure these in .env.local
+// VITE_LEMON_SQUEEZY_YEARLY=https://x5ai.lemonsqueezy.com/buy/xxxxx
+// VITE_LEMON_SQUEEZY_MONTHLY=https://x5ai.lemonsqueezy.com/buy/xxxxx
+// VITE_LEMON_SQUEEZY_CREDITS=https://x5ai.lemonsqueezy.com/buy/xxxxx
+const LEMON_SQUEEZY_YEARLY = import.meta.env.VITE_LEMON_SQUEEZY_YEARLY || '';
+const LEMON_SQUEEZY_MONTHLY = import.meta.env.VITE_LEMON_SQUEEZY_MONTHLY || '';
+const LEMON_SQUEEZY_CREDITS = import.meta.env.VITE_LEMON_SQUEEZY_CREDITS || '';
+
+// Check if payment URLs are configured
+const isPaymentConfigured = LEMON_SQUEEZY_YEARLY && LEMON_SQUEEZY_MONTHLY && LEMON_SQUEEZY_CREDITS &&
+  !LEMON_SQUEEZY_YEARLY.includes('YOUR_') &&
+  !LEMON_SQUEEZY_MONTHLY.includes('YOUR_') &&
+  !LEMON_SQUEEZY_CREDITS.includes('YOUR_');
 
 interface PaywallViewProps {
     language: string;
@@ -40,6 +50,8 @@ export const PaywallView: React.FC<PaywallViewProps> = ({
     platform = 'web',
     user
 }) => {
+    const { showToast } = useToast();
+
     // Check if user has active subscription
     const hasActiveSubscription = user?.plan === 'pro' && user?.subscriptionEndDate && new Date(user.subscriptionEndDate) > new Date();
 
@@ -107,6 +119,19 @@ export const PaywallView: React.FC<PaywallViewProps> = ({
             checkoutUrl = LEMON_SQUEEZY_YEARLY;
         } else if (selectedProduct === 'x5_credits_1000') {
             checkoutUrl = LEMON_SQUEEZY_CREDITS;
+        }
+
+        // Validate checkout URL
+        if (!checkoutUrl || checkoutUrl.includes('YOUR_')) {
+            showToast(
+                language === 'ru'
+                    ? 'Оплата временно недоступна. Попробуйте позже.'
+                    : 'Payment temporarily unavailable. Please try again later.',
+                'error'
+            );
+            setIsProcessing(false);
+            console.error('Lemon Squeezy checkout URLs not configured. Set VITE_LEMON_SQUEEZY_* in .env.local');
+            return;
         }
 
         if (window.LemonSqueezy?.Url?.Open) {

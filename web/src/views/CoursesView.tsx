@@ -9,6 +9,7 @@ import {
 import { db } from '../firebase';
 import { Course, CourseCategory, CourseDay, CourseLesson, CourseRating, ViewProps } from '../types';
 import { LoadingSpinner } from '../components/GlassComponents';
+import { LazyImage } from '../components/LazyImage';
 import { t } from '../services/translations';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -864,7 +865,7 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
         {/* Background */}
         <div className={`absolute inset-0 bg-gradient-to-br ${isPurchased || isOwner ? "from-emerald-600 to-teal-800" : "from-slate-800 to-slate-900"}`}>
           {course.coverUrl && (
-            <img src={course.coverUrl} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-60 transition-opacity" />
+            <LazyImage src={course.coverUrl} alt={course.title} className="absolute inset-0 w-full h-full opacity-50 group-hover:opacity-60 transition-opacity" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         </div>
@@ -936,7 +937,7 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
         {/* Background */}
         <div className={`absolute inset-0 bg-gradient-to-br ${category.color}`}>
           {course.coverUrl && (
-            <img src={course.coverUrl} className="absolute inset-0 w-full h-full object-cover opacity-40" />
+            <LazyImage src={course.coverUrl} alt={course.title} className="absolute inset-0 w-full h-full opacity-40" />
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
         </div>
@@ -987,7 +988,7 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
         {/* Thumbnail */}
         <div className={`w-20 h-20 rounded-xl bg-gradient-to-br ${category.color} shrink-0 overflow-hidden relative`}>
           {course.coverUrl ? (
-            <img src={course.coverUrl} className="absolute inset-0 w-full h-full object-cover" />
+            <LazyImage src={course.coverUrl} alt={course.title} className="absolute inset-0 w-full h-full" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-2xl">{category.emoji}</div>
           )}

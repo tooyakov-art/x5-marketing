@@ -4,8 +4,12 @@ import { ChevronLeft, Upload, Video, Play, Download, Sparkles, Loader2, ImagePlu
 import { ViewProps } from '../types';
 import { generateVideoFromImage, generateVideoInterpolation } from '../services/geminiService';
 import { t } from '../services/translations';
+import { useToast } from '../components/Toast';
+import { useConfirmDialog } from '../components/ConfirmDialog';
 
-export const VideoGenView: React.FC<ViewProps> = ({ onBack, user, checkUsage, language = 'ru' }) => {
+export const VideoGenView: React.FC<ViewProps> = ({ onBack, user, checkUsage, deductCredits, language = 'ru' }) => {
+  const { showToast } = useToast();
+  const { confirm } = useConfirmDialog();
   const [step, setStep] = useState<'upload' | 'generating' | 'result'>('upload');
   const [mode, setMode] = useState<'simple' | 'interpolation'>('simple');
   
@@ -54,11 +58,27 @@ export const VideoGenView: React.FC<ViewProps> = ({ onBack, user, checkUsage, la
   const handleGenerate = async () => {
     if (!imageFile) return;
     if (mode === 'interpolation' && !endImageFile) return;
-    
-    // Check credits: Veo is expensive
-    if (checkUsage && !checkUsage('pro', 50)) {
+
+    const creditCost = 50;
+
+    // Check credits first
+    if ((user?.credits || 0) < creditCost) {
+        showToast(language === 'ru' ? `Недостаточно кредитов! Нужно: ${creditCost}` : `Not enough credits! Need: ${creditCost}`, 'warning');
         return;
     }
+
+    // Confirm credit cost
+    const confirmed = await confirm({
+        title: language === 'ru' ? 'Создать видео?' : 'Generate Video?',
+        message: language === 'ru' ? 'Veo AI создаст видео из вашего изображения' : 'Veo AI will create a video from your image',
+        type: 'credits',
+        creditCost,
+        userCredits: user?.credits || 0,
+        confirmText: language === 'ru' ? 'Создать' : 'Generate',
+        cancelText: language === 'ru' ? 'Отмена' : 'Cancel'
+    });
+
+    if (!confirmed) return;
 
     setStep('generating');
     setIsGenerating(true);
@@ -67,13 +87,13 @@ export const VideoGenView: React.FC<ViewProps> = ({ onBack, user, checkUsage, la
         // Read Start Image
         const reader1 = new FileReader();
         reader1.readAsDataURL(imageFile);
-        
+
         reader1.onloadend = async () => {
              const startBase64 = (reader1.result as string).split(',')[1];
-             
+
              // Clear previous video URL to free memory
              if (videoUrl) URL.revokeObjectURL(videoUrl);
-             
+
              let result: string | null = null;
 
              if (mode === 'interpolation' && endImageFile) {
@@ -82,26 +102,31 @@ export const VideoGenView: React.FC<ViewProps> = ({ onBack, user, checkUsage, la
                  reader2.onloadend = async () => {
                      const endBase64 = (reader2.result as string).split(',')[1];
                      result = await generateVideoInterpolation(startBase64, endBase64, prompt);
-                     processResult(result);
+                     processResult(result, creditCost);
                  };
              } else {
                  result = await generateVideoFromImage(startBase64, prompt);
-                 processResult(result);
+                 processResult(result, creditCost);
              }
         };
     } catch (e) {
         setIsGenerating(false);
         setStep('upload');
-        alert("Ошибка обработки");
+        showToast(language === 'ru' ? 'Ошибка обработки' : 'Processing error', 'error');
     }
   };
 
-  const processResult = (result: string | null) => {
+  const processResult = (result: string | null, creditCost: number) => {
       if (result) {
           setVideoUrl(result);
           setStep('result');
+          // Deduct credits after successful generation
+          if (deductCredits) {
+              deductCredits(creditCost);
+          }
+          showToast(language === 'ru' ? 'Видео создано!' : 'Video created!', 'success');
       } else {
-          alert("Не удалось создать видео. Попробуйте другое фото.");
+          showToast(language === 'ru' ? 'Не удалось создать видео. Попробуйте другое фото.' : 'Failed to create video. Try another photo.', 'error');
           setStep('upload');
       }
       setIsGenerating(false);

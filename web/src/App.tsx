@@ -24,10 +24,14 @@ import { ChatsListView } from './views/ChatsListView';
 import { PaywallView } from './views/PaywallView';
 import { CourseEditorView } from './views/CourseEditorView';
 import { WhatsAppBotView } from './views/WhatsAppBotView';
+import { RedirectView } from './views/RedirectView';
 import { ViewState, User, Language, HistoryItem, AppConfig, ChatMessage, UsageState, Course, Platform, Specialist } from './types';
 import { auth, db } from './firebase';
 import { detectPlatform } from './utils/platformUtils';
 import { t } from './services/translations';
+import { useToast } from './components/Toast';
+import { useConfirmDialog } from './components/ConfirmDialog';
+import firebase from 'firebase/compat/app';
 
 const defaultConfig: AppConfig = {
     photo: true,
@@ -59,6 +63,29 @@ const Background = memo(({ view }: { view: ViewState }) => {
 });
 
 function App() {
+    const { showToast } = useToast();
+    const { confirm } = useConfirmDialog();
+
+    // Check for redirect URL (/r/:shortCode)
+    const [redirectShortCode, setRedirectShortCode] = useState<string | null>(() => {
+        const path = window.location.pathname;
+        if (path.startsWith('/r/')) {
+            return path.substring(3); // Extract shortCode
+        }
+        return null;
+    });
+
+    // If we have a redirect shortCode, render the redirect view
+    if (redirectShortCode) {
+        return <RedirectView shortCode={redirectShortCode} />;
+    }
+
+    // Store toast function in ref for use in window callbacks
+    const showToastRef = useRef(showToast);
+    useEffect(() => {
+        showToastRef.current = showToast;
+    }, [showToast]);
+
     const [user, setUser] = useState<User>(() => {
         const saved = localStorage.getItem('x5_user');
         if (saved) {
@@ -139,8 +166,8 @@ function App() {
         const isRightSwipe = distanceX < -minSwipeDistance;
 
         if (platform === 'ios') {
-            // "chats_list" is excluded based on user feedback "only 4 pages"
-            const TABS: ViewState[] = ['home', 'courses', 'hire', 'profile'];
+            // Include chats_list for iOS users to access messages
+            const TABS: ViewState[] = ['home', 'courses', 'hire', 'chats_list', 'profile'];
             const currentIndex = TABS.indexOf(currentView);
 
             if (currentIndex !== -1) {
@@ -168,7 +195,7 @@ function App() {
         // --- GLOBAL FLUTTER LISTENERS ---
         (window as any).onAppPaymentSuccess = (productId: string) => {
             const currentUser = userRef.current; // Use ref for fresh data
-            alert("Оплата прошла успешно! Открываю доступ...");
+            showToastRef.current("Оплата прошла успешно!", "success");
             console.log("[App] onAppPaymentSuccess called with:", productId, "user:", currentUser);
 
             // Check if user already has active subscription
@@ -263,7 +290,7 @@ function App() {
         };
 
         (window as any).onAppPaymentFailed = (error: string) => {
-            alert("Ошибка оплаты: " + error);
+            showToastRef.current("Ошибка оплаты: " + error, "error");
         };
 
         // --- AUTH SUCCESS CALLBACK FROM FLUTTER ---
@@ -305,7 +332,7 @@ function App() {
         // --- AUTH FAILURE CALLBACK FROM FLUTTER ---
         (window as any).onAppAuthFailed = (error: string) => {
             console.error('[App] Auth failed from Flutter:', error);
-            alert('Ошибка авторизации: ' + error);
+            showToastRef.current('Ошибка авторизации: ' + error, 'error');
         };
 
 
@@ -603,21 +630,37 @@ function App() {
     const checkUsageAndProceed = (tier: 'standard' | 'pro', cost: number = 5): boolean => {
         // Only CHECK if user has enough credits - do NOT deduct here!
         if ((user.credits || 0) < cost) {
-            alert(`Недостаточно кредитов! Нужно: ${cost}, у вас: ${user.credits || 0}`);
+            showToast(`Недостаточно кредитов! Нужно: ${cost}, у вас: ${user.credits || 0}`, 'warning');
             return false;
         }
         return true;
     };
 
     // New function to actually deduct credits AFTER successful generation
-    const deductCredits = (cost: number) => {
+    const deductCredits = async (cost: number) => {
         const newAmount = (user.credits || 0) - cost;
         updateCredits(newAmount);
-        
-        // Sync to Firestore
+
+        // Atomic transaction to Firestore
         if (user.id && !user.id.startsWith('guest-')) {
-            db.collection('users').doc(user.id).set({ credits: newAmount }, { merge: true })
-              .catch(e => console.error("Failed to sync credits", e));
+            try {
+                await db.runTransaction(async (transaction) => {
+                    const userRef = db.collection('users').doc(user.id);
+                    const userDoc = await transaction.get(userRef);
+                    const currentCredits = userDoc.data()?.credits || 0;
+                    if (currentCredits < cost) {
+                        throw new Error('Insufficient credits');
+                    }
+                    transaction.update(userRef, {
+                        credits: currentCredits - cost
+                    });
+                });
+            } catch (e) {
+                console.error("Failed to sync credits", e);
+                // Revert local state if transaction failed
+                updateCredits((user.credits || 0));
+                showToast("Ошибка списания кредитов", "error");
+            }
         }
     };
 
@@ -642,17 +685,26 @@ function App() {
         }
     };
 
-    const handleInitiateCoursePurchase = (course: Course) => {
+    const handleInitiateCoursePurchase = async (course: Course) => {
         // Проверка: уже куплен?
         if (user.purchasedCourseIds?.includes(course.id)) {
-            alert("Курс уже куплен");
+            showToast("Курс уже куплен", "info");
             return;
         }
 
         // Проверка кредитов
         if (user.credits >= course.price) {
-            if (window.confirm(`Купить курс "${course.title}" за ${course.price} кредитов?`)) {
+            const confirmed = await confirm({
+                title: `Купить курс?`,
+                message: `"${course.title}"`,
+                type: 'credits',
+                creditCost: course.price,
+                userCredits: user.credits,
+                confirmText: 'Купить',
+                cancelText: 'Отмена'
+            });
 
+            if (confirmed) {
                 const newCredits = user.credits - course.price;
                 const newPurchases = [...(user.purchasedCourseIds || []), course.id];
 
@@ -666,10 +718,22 @@ function App() {
                 localStorage.setItem('x5_user', JSON.stringify(updatedUser));
                 localStorage.setItem('x5_credits', newCredits.toString());
 
-                db.collection('users').doc(user.id).set({
-                    credits: newCredits,
-                    purchasedCourseIds: newPurchases
-                }, { merge: true }).catch(err => console.error("Error saving purchase", err));
+                // Atomic transaction for credits
+                try {
+                    await db.runTransaction(async (transaction) => {
+                        const userRef = db.collection('users').doc(user.id);
+                        const userDoc = await transaction.get(userRef);
+                        const currentCredits = userDoc.data()?.credits || 0;
+                        transaction.update(userRef, {
+                            credits: currentCredits - course.price,
+                            purchasedCourseIds: firebase.firestore.FieldValue.arrayUnion(course.id)
+                        });
+                    });
+                    showToast("Курс куплен!", "success");
+                } catch (err) {
+                    console.error("Error saving purchase", err);
+                    showToast("Ошибка сохранения, но курс доступен", "warning");
+                }
 
                 // Show success logic
                 setPendingCourse(course);
@@ -677,7 +741,17 @@ function App() {
             }
         } else {
             // Not enough credits
-            if (window.confirm("Недостаточно кредитов. Пополнить баланс?")) {
+            const goToPaywall = await confirm({
+                title: "Недостаточно кредитов",
+                message: `Нужно ${course.price} кредитов, у вас ${user.credits}. Пополнить баланс?`,
+                type: 'credits',
+                creditCost: course.price,
+                userCredits: user.credits,
+                confirmText: 'Пополнить',
+                cancelText: 'Отмена'
+            });
+
+            if (goToPaywall) {
                 setCurrentView('paywall');
             }
         }
@@ -865,7 +939,7 @@ function App() {
                             {currentView === 'design' && <DesignView user={user} onBack={() => handleNavigate('home')} checkUsage={checkUsageAndProceed} language={language} initialPrompt={initialPrompt} />}
                             {currentView === 'contract' && <ContractView user={user} onBack={() => handleNavigate('home')} checkUsage={checkUsageAndProceed} initialPrompt={initialPrompt} />}
                             {currentView === 'instagram' && <InstagramView user={user} onBack={() => handleNavigate('home')} checkUsage={checkUsageAndProceed} deductCredits={deductCredits} language={language} initialPrompt={initialPrompt} />}
-                            {currentView === 'video_gen' && <VideoGenView user={user} onBack={() => handleNavigate('home')} checkUsage={checkUsageAndProceed} initialPrompt={initialPrompt} />}
+                            {currentView === 'video_gen' && <VideoGenView user={user} onBack={() => handleNavigate('home')} checkUsage={checkUsageAndProceed} deductCredits={deductCredits} initialPrompt={initialPrompt} />}
                             {currentView === 'all_tech' && <AllTechView config={config} onNavigate={handleNavigate} onBack={() => handleNavigate('home')} />}
                             {currentView === 'admin' && <AdminView config={config} onUpdateConfig={setConfig} onBack={() => handleNavigate('profile')} />}
                             {currentView === 'admin_key' && <AdminApiKeyView onBack={() => handleNavigate('profile')} />}
@@ -960,6 +1034,33 @@ function App() {
 
                                 </div>
                             </motion.div>
+                        </div>
+                    )}
+
+                    {/* iOS Page Indicator (Dots) */}
+                    {platform === 'ios' && isTabBarVisible && ['home', 'courses', 'hire', 'chats_list', 'profile'].includes(currentView) && (
+                        <div className="absolute bottom-0 left-0 w-full z-40 pb-6 pointer-events-none md:hidden">
+                            <div className="flex items-center justify-center gap-2">
+                                {['home', 'courses', 'hire', 'chats_list', 'profile'].map((tab) => (
+                                    <motion.div
+                                        key={tab}
+                                        className={`rounded-full transition-all ${
+                                            currentView === tab
+                                                ? 'w-6 h-2 bg-slate-900'
+                                                : 'w-2 h-2 bg-slate-300'
+                                        }`}
+                                        layoutId={currentView === tab ? "iosPageIndicator" : undefined}
+                                        transition={{ type: 'spring', damping: 20 }}
+                                    />
+                                ))}
+                            </div>
+                            <p className="text-center text-[10px] text-slate-400 mt-2 font-medium">
+                                {currentView === 'home' && 'Главная'}
+                                {currentView === 'courses' && 'Курсы'}
+                                {currentView === 'hire' && 'Биржа'}
+                                {currentView === 'chats_list' && 'Сообщения'}
+                                {currentView === 'profile' && 'Профиль'}
+                            </p>
                         </div>
                     )}
                 </div>
