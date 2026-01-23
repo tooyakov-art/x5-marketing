@@ -131,6 +131,12 @@ flutter build apk --release  # Release APK
 12. **Removed center sparkle button from tab bar** - now 4 buttons (Home, Courses, Hire, Profile)
 13. **Removed X5 Pro banner from HomeView** - was partially visible/cut off
 
+### Session 23 Jan 2025 - iOS App Store Upload Fix
+14. **Fixed iOS App Store Connect upload failure** - validation was failing with error `com.googleusercontent.apps.YOUR_IOS_CLIENT_ID`
+    - **Root cause**: `GoogleService-Info.plist` was missing from iOS project, so `google_sign_in` plugin inserted placeholder URL scheme
+    - **Fix**: Added `flutter/ios/Runner/GoogleService-Info.plist` with correct BUNDLE_ID (`com.x5marketing.mobile`)
+    - **Fix**: Added `CFBundleURLTypes` to `Info.plist` with real REVERSED_CLIENT_ID: `com.googleusercontent.apps.931639129066-drd4qhjo5pgki47itjup0dibft0a7i3f`
+
 ## Critical Architecture Notes
 
 ### Flutter/Android
@@ -139,6 +145,12 @@ flutter build apk --release  # Release APK
 - **IMPORTANT**: MainActivity package MUST match applicationId, otherwise app crashes on launch
 - **IAP is lazy**: Don't initialize `InAppPurchase.instance` in class fields, do it in async method
 - **flutter_windowmanager_plus**: Used for screen protection, wrapped in try-catch
+
+### Flutter/iOS
+- **GoogleService-Info.plist**: MUST be in `flutter/ios/Runner/GoogleService-Info.plist`
+- **BUNDLE_ID**: Must be `com.x5marketing.mobile` (same as Android applicationId)
+- **URL Scheme**: Required in Info.plist for Google Sign-In: `com.googleusercontent.apps.931639129066-drd4qhjo5pgki47itjup0dibft0a7i3f`
+- **IMPORTANT**: Without GoogleService-Info.plist, google_sign_in plugin inserts placeholder URL scheme that fails App Store validation
 
 ### Web/React
 - **Tab bar**: 4 buttons only (no center action button)
