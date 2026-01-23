@@ -75,6 +75,14 @@ workflows:
         distribution_type: app_store
         bundle_identifier: com.x5marketing.mobile
     scripts:
+      - name: Clean Flutter build cache
+        script: |
+          cd flutter
+          flutter clean
+      - name: Remove stale Podfile.lock
+        script: |
+          rm -f flutter/ios/Podfile.lock
+          rm -rf flutter/ios/Pods
       - name: Set up code signing
         script: xcode-project use-profiles
       - name: Get Flutter packages
@@ -84,7 +92,7 @@ workflows:
       - name: Install CocoaPods
         script: |
           cd flutter/ios
-          pod install
+          pod install --repo-update
       - name: Build iOS
         script: |
           cd flutter
