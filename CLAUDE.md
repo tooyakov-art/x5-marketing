@@ -131,6 +131,111 @@ flutter build apk --release  # Release APK
 12. **Removed center sparkle button from tab bar** - now 4 buttons (Home, Courses, Hire, Profile)
 13. **Removed X5 Pro banner from HomeView** - was partially visible/cut off
 
+### Session 23 Jan 2025 - Major Improvements (10 fixes)
+
+**iOS Build Fix:**
+14. **Fixed iOS build number** - App Store Connect rejected build with version +3 (already uploaded), incremented to +4 in `flutter/pubspec.yaml`
+
+**New Components Created:**
+15. **Toast Notification System** (`web/src/components/Toast.tsx`)
+    - Replaced all browser `alert()` calls with styled toast notifications
+    - Types: success (green), error (red), warning (yellow), info (blue)
+    - Auto-dismiss with configurable duration
+    - React Context + Provider pattern for global access via `useToast()` hook
+
+16. **Credit Confirmation Dialog** (`web/src/components/ConfirmDialog.tsx`)
+    - Shows credit cost before AI operations (video generation, etc.)
+    - Displays: user balance, operation cost, remaining balance
+    - Returns `Promise<boolean>` for async confirmation flow
+    - Prevents accidental credit spending
+
+17. **Error Boundary** (`web/src/components/ErrorBoundary.tsx`)
+    - Catches React rendering errors to prevent white screen crashes
+    - Shows user-friendly error page with "Retry" and "Go Home" buttons
+    - Logs errors to console (can be extended to analytics)
+    - Development mode shows error details
+
+18. **Lazy Image Component** (`web/src/components/LazyImage.tsx`)
+    - Uses IntersectionObserver to load images only when visible
+    - Shows skeleton animation while loading
+    - Error state with "Image unavailable" fallback
+    - 100px rootMargin for preloading before entering viewport
+
+19. **Redirect View for Link Tracking** (`web/src/views/RedirectView.tsx`)
+    - Handles `/r/:shortCode` URLs for Analytics link tracking
+    - Increments click count in Firestore atomically
+    - Redirects user to original URL after tracking
+    - Shows loading spinner during redirect
+
+**Feature Improvements:**
+
+20. **WhatsApp Bot Backend** (`web/src/views/WhatsAppBotView.tsx`)
+    - Was: Fake `setTimeout()` simulation with no persistence
+    - Now: Full Firestore backend with `whatsapp_bots` collection
+    - Added fields: greeting message, bot rules/instructions
+    - "My Bots" section showing user's created bots with real-time updates
+    - Delete bot functionality
+    - Toast notifications for success/error states
+
+21. **Analytics Link Tracking** (`web/src/views/AnalyticsView.tsx`)
+    - Was: Fake `Math.random()` simulated clicks
+    - Now: Real Firestore tracking with `tracking_links` global collection
+    - Shortened URLs: `https://x5marketing.com/r/{shortCode}`
+    - Real-time click count updates via Firestore listeners
+    - URL validation before creating links
+    - Delete link functionality
+    - Copy shortened URL to clipboard
+
+22. **Atomic Credit Transactions** (`web/src/App.tsx`)
+    - Was: Fire-and-forget Firestore update (race condition risk)
+    - Now: `runTransaction()` for atomic credit deduction
+    - Prevents double-spending and negative balances
+    - Throws error if insufficient credits
+
+23. **iOS Navigation Fix** (`web/src/App.tsx`)
+    - Was: Swipe navigation tabs didn't include chats, making it inaccessible
+    - Now: Added 'chats_list' to iOS swipeable tabs array
+    - Added page indicator dots at bottom of screen
+    - Order: home → courses → hire → chats_list → profile
+
+24. **Video Generation Improvements** (`web/src/views/VideoGenView.tsx`)
+    - Added credit confirmation dialog before generation (50 credits)
+    - Replaced alerts with toast notifications
+    - Added proper `deductCredits()` call after successful generation
+    - Memory leak fix: revoke blob URL on cleanup
+
+25. **Lemon Squeezy Environment Variables** (`web/src/views/PaywallView.tsx`)
+    - Was: Hardcoded placeholder URLs (non-functional)
+    - Now: Uses `VITE_LEMONSQUEEZY_*` environment variables
+    - Validates URL presence before opening checkout
+    - Shows error toast if not configured
+
+26. **Lazy Loading in Courses** (`web/src/views/CoursesView.tsx`)
+    - Replaced `<img>` with `<LazyImage>` for course cover images
+    - Improves initial page load performance
+
+**Files Modified:**
+- `flutter/pubspec.yaml` - version bump to 1.0.2+4
+- `web/index.tsx` - wrapped App with ErrorBoundary, ToastProvider, ConfirmDialogProvider
+- `web/src/App.tsx` - toast, confirm, iOS navigation, atomic credits, redirect handling
+- `web/src/views/AnalyticsView.tsx` - real link tracking backend
+- `web/src/views/WhatsAppBotView.tsx` - Firestore bot storage
+- `web/src/views/VideoGenView.tsx` - credit confirmation
+- `web/src/views/CoursesView.tsx` - lazy loading
+- `web/src/views/PaywallView.tsx` - env variables
+
+**New Files:**
+- `web/src/components/Toast.tsx`
+- `web/src/components/ConfirmDialog.tsx`
+- `web/src/components/ErrorBoundary.tsx`
+- `web/src/components/LazyImage.tsx`
+- `web/src/views/RedirectView.tsx`
+
+**Firestore Collections Added:**
+- `whatsapp_bots` - user's WhatsApp bot configurations
+- `tracking_links` - global shortened URL lookup for redirects
+- `users/{uid}/links` - user's tracking links with click counts
+
 ## Critical Architecture Notes
 
 ### Flutter/Android
