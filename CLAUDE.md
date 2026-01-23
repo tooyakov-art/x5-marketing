@@ -261,6 +261,26 @@ flutter build apk --release  # Release APK
 - `ios-release` - Needs Apple certs
 - `web-deploy` - Needs FIREBASE_TOKEN in environment variables
 
+## iOS Deployment - ВАЖНО!
+**Для деплоя на iPhone папку `flutter/` нужно пушить в ОТДЕЛЬНЫЙ репозиторий!**
+
+Codemagic для iOS требует чистый Flutter-проект в корне репозитория:
+1. Создать отдельный репо (например `x5-marketing-flutter`)
+2. Скопировать содержимое папки `flutter/` в корень нового репо
+3. Подключить этот репо к Codemagic для iOS билдов
+
+Структура для iOS репо:
+```
+x5-marketing-flutter/     # Отдельный репозиторий
+├── lib/
+├── ios/
+├── android/
+├── pubspec.yaml
+└── codemagic.yaml
+```
+
+**НЕ пушить flutter как подпапку** - Codemagic не найдёт проект!
+
 ## Languages
 App supports 3 languages:
 - Russian (ru) - default
