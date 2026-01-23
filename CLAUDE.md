@@ -1,5 +1,20 @@
 # X5 Marketing - Project Context for Claude
 
+## CRITICAL: Two Repositories!
+**ВАЖНО! Проект использует ДВА репозитория:**
+
+| Репозиторий | Содержимое | Codemagic |
+|-------------|------------|-----------|
+| `tooyakov-art/x5-marketing` | Web (React) + Flutter копия | Web deploy only |
+| `tooyakov-art/5x-flutter` | Flutter (iOS/Android) | iOS/Android builds |
+
+**При изменениях в Flutter коде:**
+1. Вносить изменения в `x5-marketing/flutter/`
+2. **ОБЯЗАТЕЛЬНО** копировать изменения в репо `5x-flutter`
+3. Пушить в ОБА репозитория
+
+**Codemagic для iOS/Android билдов использует репо `5x-flutter`, НЕ `x5-marketing`!**
+
 ## Project Overview
 X5 Marketing - multi-platform marketing automation tool for Kazakhstan market.
 - **Web**: React + TypeScript + Vite + Firebase
