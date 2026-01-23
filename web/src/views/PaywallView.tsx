@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Check, Zap, Crown, ShieldCheck, CheckCircle, AlertTriangle } from 'lucide-react';
+import { X, Check, Zap, Crown, ShieldCheck, CheckCircle, AlertTriangle, CreditCard } from 'lucide-react';
 import { sendToApp, isMobileApp } from '../utils/appBridge';
 import { NativeBridge } from '../services/nativeBridge';
 import { Platform, User } from '../types';
 import { t } from '../services/translations';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../components/Toast';
+import { StripePayment } from '../components/StripePayment';
 
 // Lemon Squeezy Checkout URLs - Configure these in .env.local
 // VITE_LEMON_SQUEEZY_YEARLY=https://x5ai.lemonsqueezy.com/buy/xxxxx
@@ -15,11 +16,15 @@ const LEMON_SQUEEZY_YEARLY = import.meta.env.VITE_LEMON_SQUEEZY_YEARLY || '';
 const LEMON_SQUEEZY_MONTHLY = import.meta.env.VITE_LEMON_SQUEEZY_MONTHLY || '';
 const LEMON_SQUEEZY_CREDITS = import.meta.env.VITE_LEMON_SQUEEZY_CREDITS || '';
 
+// Stripe configuration
+const STRIPE_PUBLIC_KEY = import.meta.env.VITE_STRIPE_PUBLIC_KEY || '';
+const USE_STRIPE = !!STRIPE_PUBLIC_KEY; // Use Stripe if key is configured
+
 // Check if payment URLs are configured
-const isPaymentConfigured = LEMON_SQUEEZY_YEARLY && LEMON_SQUEEZY_MONTHLY && LEMON_SQUEEZY_CREDITS &&
+const isPaymentConfigured = USE_STRIPE || (LEMON_SQUEEZY_YEARLY && LEMON_SQUEEZY_MONTHLY && LEMON_SQUEEZY_CREDITS &&
   !LEMON_SQUEEZY_YEARLY.includes('YOUR_') &&
   !LEMON_SQUEEZY_MONTHLY.includes('YOUR_') &&
-  !LEMON_SQUEEZY_CREDITS.includes('YOUR_');
+  !LEMON_SQUEEZY_CREDITS.includes('YOUR_'));
 
 interface PaywallViewProps {
     language: string;
@@ -71,6 +76,55 @@ export const PaywallView: React.FC<PaywallViewProps> = ({
 
     const [selectedProduct, setSelectedProduct] = useState<ProductId>(getDefaultProduct());
     const [isProcessing, setIsProcessing] = useState(false);
+    const [showStripeModal, setShowStripeModal] = useState(false);
+
+    // Get price in cents for Stripe
+    const getProductPrice = (product: ProductId): number => {
+        switch (product) {
+            case 'x5_pro_yearly': return 19900; // $199.00
+            case 'x5_pro_monthly': return 1900; // $19.00
+            case 'x5_credits_1000': return 900; // $9.00
+            default: return 900;
+        }
+    };
+
+    // Get product name for display
+    const getProductName = (product: ProductId): string => {
+        switch (product) {
+            case 'x5_pro_yearly': return language === 'ru' ? 'X5 Pro Годовой' : 'X5 Pro Yearly';
+            case 'x5_pro_monthly': return language === 'ru' ? 'X5 Pro Месячный' : 'X5 Pro Monthly';
+            case 'x5_credits_1000': return language === 'ru' ? '1000 Кредитов' : '1000 Credits';
+            default: return 'X5 Pro';
+        }
+    };
+
+    // Handle successful Stripe payment
+    const handleStripeSuccess = (paymentId: string) => {
+        console.log('[Paywall] Stripe payment success:', paymentId);
+        showToast(language === 'ru' ? 'Оплата успешна!' : 'Payment successful!', 'success');
+
+        // Update user credits/subscription based on product
+        // This should trigger onBuy callback which updates user state
+        if (onBuy) {
+            onBuy();
+        }
+
+        setTimeout(() => {
+            setShowStripeModal(false);
+            onClose();
+        }, 2000);
+    };
+
+    // Handle Stripe payment error
+    const handleStripeError = (error: string) => {
+        console.error('[Paywall] Stripe payment error:', error);
+        showToast(language === 'ru' ? 'Ошибка оплаты' : 'Payment failed', 'error');
+    };
+
+    // Handle Stripe cancel
+    const handleStripeCancel = () => {
+        setShowStripeModal(false);
+    };
 
     // Load Lemon Squeezy script for web
     useEffect(() => {
@@ -113,7 +167,14 @@ export const PaywallView: React.FC<PaywallViewProps> = ({
             return;
         }
 
-        // Web Flow - Lemon Squeezy Overlay
+        // Web Flow - Use Stripe if configured, otherwise Lemon Squeezy
+        if (USE_STRIPE) {
+            setShowStripeModal(true);
+            setIsProcessing(false);
+            return;
+        }
+
+        // Fallback: Lemon Squeezy Overlay
         let checkoutUrl = LEMON_SQUEEZY_MONTHLY;
         if (selectedProduct === 'x5_pro_yearly') {
             checkoutUrl = LEMON_SQUEEZY_YEARLY;
@@ -452,6 +513,7 @@ export const PaywallView: React.FC<PaywallViewProps> = ({
                 >
                     {isProcessing ? 'Processing...' : (
                         <>
+                            <CreditCard size={20} className="mr-1" />
                             <span>
                                 {selectedProduct === 'x5_credits_1000'
                                     ? t('paywall_btn_credits', language)
@@ -472,7 +534,79 @@ export const PaywallView: React.FC<PaywallViewProps> = ({
                         </>
                     )}
                 </button>
+
+                {/* Google Pay badge */}
+                {USE_STRIPE && (
+                    <div className="flex items-center justify-center gap-2 mt-3">
+                        <span className="text-xs text-slate-400">
+                            {language === 'ru' ? 'Поддерживается:' : 'Supported:'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                            <div className="bg-white border border-slate-200 rounded px-2 py-1 flex items-center gap-1">
+                                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="#4285F4">
+                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                </svg>
+                                <span className="text-[10px] font-bold text-slate-600">Pay</span>
+                            </div>
+                            <div className="bg-white border border-slate-200 rounded px-2 py-1 flex items-center gap-1">
+                                <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor">
+                                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.384a.77.77 0 0 1 .757-.645h6.393c2.108 0 3.6.576 4.43 1.712.381.522.621 1.102.723 1.725.107.654.07 1.426-.11 2.298l-.003.015v.004c-.322 2.106-1.33 3.534-2.996 4.247-.796.339-1.748.509-2.825.509H8.57l-.934 6.09a.773.773 0 0 1-.76.645v-.647z" fill="#002c8a"/>
+                                </svg>
+                                <span className="text-[10px] font-bold text-slate-600">PayPal</span>
+                            </div>
+                            <div className="bg-white border border-slate-200 rounded px-2 py-1">
+                                <CreditCard size={14} className="text-slate-600" />
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
+
+            {/* Stripe Payment Modal */}
+            <AnimatePresence>
+                {showStripeModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[70] bg-black/50 flex items-center justify-center p-4"
+                        onClick={() => setShowStripeModal(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-slate-900">
+                                    {language === 'ru' ? 'Оплата' : 'Payment'}
+                                </h2>
+                                <button
+                                    onClick={() => setShowStripeModal(false)}
+                                    className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center"
+                                >
+                                    <X size={18} className="text-slate-600" />
+                                </button>
+                            </div>
+
+                            <StripePayment
+                                amount={getProductPrice(selectedProduct)}
+                                currency="usd"
+                                productName={getProductName(selectedProduct)}
+                                onSuccess={handleStripeSuccess}
+                                onError={handleStripeError}
+                                onCancel={handleStripeCancel}
+                                language={language as 'ru' | 'en' | 'kz'}
+                            />
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
