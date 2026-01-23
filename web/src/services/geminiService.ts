@@ -274,8 +274,8 @@ export const improvePrompt = async (prompt: string, mode: PhotoMode): Promise<st
 
 // --- IMAGE GENERATION ---
 export const generateImage = async (
-  prompt: string,
-  mode: PhotoMode | string = 'studio',
+  prompt: string, 
+  mode: PhotoMode | string = 'studio', 
   aspectRatio: '1:1' | '16:9' | '9:16' | '3:4' | '4:3' = '1:1',
   referenceImagesBase64: string[] = [],
   tier: 'standard' | 'pro' = 'standard'
@@ -286,50 +286,56 @@ export const generateImage = async (
 
         const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-        // Build parts array
         const parts: any[] = [{ text: finalPrompt }];
-
+        
         // Add references if any
         for (const base64 of referenceImagesBase64) {
             parts.push({ inlineData: { mimeType: 'image/jpeg', data: base64 } });
         }
 
-        // Use Gemini 2.0 Flash with image generation
-        const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
-            contents: { parts },
-            config: {
-                responseModalities: ['Text', 'Image'],
+        const config: any = {
+            imageConfig: { aspectRatio: aspectRatio }
+        };
+        
+        // Attempt 1: Try Pro Model (if available)
+        try {
+            config.imageConfig.imageSize = '1K';
+            const response = await ai.models.generateContent({
+                model: 'gemini-3-pro-image-preview',
+                contents: { parts },
+                config: config
+            });
+            const imgPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+            if (imgPart && imgPart.inlineData) {
+                return { imageUrl: `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}` };
             }
+        } catch (proError: any) {
+            console.warn("Pro Model failed, trying Flash...", proError);
+            // If pro failed (e.g. 403), remove size param (not supported in flash) and try flash
+            delete config.imageConfig.imageSize;
+        }
+
+        // Attempt 2: Fallback to Flash Model
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: { parts },
+            config: config
         });
 
-        // Find image part in response
+        // Find image part
         const imgPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-
+        
         if (imgPart && imgPart.inlineData) {
             return { imageUrl: `data:${imgPart.inlineData.mimeType};base64,${imgPart.inlineData.data}` };
         }
-
-        // Check if there's text response (error message from API)
-        const textPart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.text);
-        if (textPart?.text) {
-            console.warn("AI returned text instead of image:", textPart.text);
-        }
-
-        return { error: "AI не смог создать изображение. Попробуйте другой запрос." };
+        return { error: "AI не смог создать изображение. Попробуйте упростить запрос." };
 
     } catch (e: any) {
         console.error("Image Gen Error:", e);
-        if (e.message?.includes("429") || e.message?.includes("quota")) {
-             return { error: "Превышен лимит запросов. Подождите минуту." };
+        if (e.message?.includes("429")) {
+             return { error: "Превышен лимит запросов (Quota). Подождите минуту." };
         }
-        if (e.message?.includes("400") || e.message?.includes("invalid")) {
-             return { error: "Некорректный запрос. Попробуйте изменить описание." };
-        }
-        if (e.message?.includes("403") || e.message?.includes("permission")) {
-             return { error: "Нет доступа к генерации изображений. Проверьте API ключ." };
-        }
-        return { error: "Ошибка генерации: " + (e.message || "Неизвестная ошибка") };
+        return { error: "Ошибка генерации: " + e.message };
     }
 };
 
