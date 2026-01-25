@@ -7,6 +7,15 @@ description: Multi-platform marketing automation for Kazakhstan market. React + 
 
 Marketing SaaS platform for Kazakhstan with AI-powered tools for content creation, automation, and analytics.
 
+## Session Memory
+
+**Read [MEMORY.md](MEMORY.md) at session start** — contains context from previous sessions.
+
+**Update MEMORY.md at session end** — add:
+- What was done
+- Key decisions made
+- What to remember for next time
+
 ## Quick Start
 
 ```bash
