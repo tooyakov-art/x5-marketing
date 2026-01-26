@@ -1,22 +1,20 @@
 ---
 name: dev-web
-description: Start React web development server and open in browser
+description: Start React development server on localhost:5173
 disable-model-invocation: true
-user-invocable: true
-allowed-tools: Bash
+allowed-tools: Bash(npm:*), Bash(cd:*)
 ---
 
-# Web Development Server
+# Start Web Dev Server
 
-Start the React development server for X5 Marketing web app.
-
-## Steps:
-1. Navigate to web directory
-2. Install dependencies if needed
-3. Start dev server on localhost:5173
+Run React development server for X5 Marketing.
 
 ```bash
 cd web && npm install && npm run dev
 ```
 
-After starting, open http://localhost:5173 in browser.
+Server starts at http://localhost:5173
+
+## Troubleshooting
+- Port busy: `npx kill-port 5173`
+- Dependencies: `npm install --force`

@@ -13,14 +13,17 @@
       "Bash(dir:*)",
       "Bash(mkdir:*)",
       "Bash(type:*)",
+      "Bash(echo:*)",
       "Read(web/**)",
       "Read(flutter/**)",
       "Read(.claude/**)",
       "Read(CLAUDE.md)",
-      "Edit(web/**)",
-      "Edit(flutter/**)",
-      "Write(web/**)",
-      "Write(flutter/**)",
+      "Read(PLAN.md)",
+      "Read(*.md)",
+      "Edit(web/src/**)",
+      "Edit(flutter/lib/**)",
+      "Write(web/src/**)",
+      "Write(flutter/lib/**)",
       "Write(.claude/**)"
     ],
     "deny": [
@@ -28,12 +31,42 @@
       "Read(.env.*)",
       "Read(web/.env)",
       "Read(web/.env.*)",
+      "Read(**/secrets/**)",
       "Write(.env)",
       "Write(.env.*)",
       "Bash(rm -rf:*)",
-      "Bash(del /s:*)",
+      "Bash(del /s /q:*)",
       "Bash(sudo:*)",
-      "Bash(format:*)"
+      "Bash(format:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd /c echo [HOOK] Command: %TOOL_INPUT% >> .claude\\command-log.txt 2>nul || true"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cmd /c echo [%date% %time%] Modified: %FILE_PATH% >> .claude\\edit-log.txt 2>nul || true"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_ENABLE_TELEMETRY": "1"
   }
 }

@@ -1,27 +1,20 @@
 ---
 name: deploy
-description: Deploy web app to Firebase Hosting
+description: Build and deploy web app to Firebase Hosting
 disable-model-invocation: true
-user-invocable: true
-allowed-tools: Bash
+allowed-tools: Bash(npm:*), Bash(npx firebase:*), Bash(cd:*), Read
 ---
 
 # Deploy to Firebase
 
-Deploy the React web app to Firebase Hosting.
+Deploy X5 Marketing to production.
 
-## Steps:
-1. Build production version
-2. Deploy to Firebase
+## Steps
+1. Build: `cd web && npm run build`
+2. Verify `web/dist/` exists
+3. Deploy: `npx firebase deploy --only hosting --project x5-marketing-app`
 
-```bash
-cd web && npm run build && npx firebase deploy --only hosting --project x5-marketing-app
-```
-
-## URLs:
-- Primary: https://x5-marketing-app.web.app
-- Custom domain: https://x5marketing.com
-
-## Notes:
-- Requires Firebase CLI authentication
-- Run `firebase login` if not authenticated
+## Post-deploy
+- Live URL: https://x5-marketing-app.web.app
+- Domain: https://x5marketing.com
+- Console: https://console.firebase.google.com/project/x5-marketing-app
