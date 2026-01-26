@@ -1,8 +1,9 @@
 ---
 name: test-runner
-description: Runs tests and reports failures. Use after implementing features.
+description: Runs tests and reports failures with error details
 tools: Bash, Read
 model: haiku
+permissionMode: default
 ---
 
 # Test Runner Agent
@@ -11,7 +12,7 @@ Run tests for X5 Marketing project and report results.
 
 ## Web Tests
 ```bash
-cd web && npm run test
+cd web && npm test
 ```
 
 ## Flutter Tests
@@ -29,7 +30,9 @@ cd flutter && flutter build apk --debug
 ```
 
 ## Output Format
-1. Run the requested tests
-2. Report only failures with error messages
-3. Suggest fixes for common issues
-4. Return success/failure summary
+Report only:
+1. Failed tests with error messages
+2. Build errors if any
+3. Summary: X passed, Y failed
+
+Do NOT include passing test details - only failures matter.

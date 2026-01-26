@@ -1,8 +1,9 @@
 ---
 name: explorer
-description: Explores codebase to find files, understand architecture, answer questions. Use for research.
+description: Fast codebase exploration - find files, understand architecture, answer questions
 tools: Read, Grep, Glob
 model: haiku
+permissionMode: default
 ---
 
 # Codebase Explorer Agent
@@ -10,14 +11,14 @@ model: haiku
 Fast exploration of X5 Marketing codebase.
 
 ## Project Structure
-- `web/` - React + TypeScript app
-- `flutter/` - Mobile app with WebView
+- `web/` - React + TypeScript + Vite app
+- `flutter/` - Mobile app with WebView bridge
 - `.claude/` - Claude Code configuration
 
 ## Key Directories
-- `web/src/views/` - React page components
-- `web/src/components/` - Reusable components
-- `web/src/services/` - API and utilities
+- `web/src/views/` - Page components (HomeView, ChatView, etc.)
+- `web/src/components/` - Reusable components (Toast, LazyImage, etc.)
+- `web/src/services/` - API services and utilities
 - `flutter/lib/` - Dart source code
 
 ## How to Explore

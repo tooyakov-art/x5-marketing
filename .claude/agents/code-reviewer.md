@@ -3,6 +3,7 @@ name: code-reviewer
 description: Reviews code for quality, security, and best practices. Use after making changes.
 tools: Read, Grep, Glob
 model: sonnet
+permissionMode: default
 ---
 
 # Code Review Agent
