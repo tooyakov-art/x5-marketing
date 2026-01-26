@@ -9,20 +9,42 @@ X5 Marketing - multi-platform marketing automation tool for Kazakhstan market.
 ## Repository Structure
 ```
 x5-marketing/
-├── flutter/           # Mobile app (iOS & Android)
-│   ├── lib/main.dart  # Main Flutter app with WebView bridge
-│   ├── android/       # Android-specific configs
-│   └── ios/           # iOS-specific configs
-├── web/               # React web app
+├── .claude/                 # Claude Code configuration
+│   ├── settings.json        # Permissions and hooks
+│   ├── skills/              # Custom slash commands
+│   │   ├── dev-web/         # /dev-web - start React dev server
+│   │   ├── dev-flutter/     # /dev-flutter - run Flutter app
+│   │   ├── deploy/          # /deploy - deploy to Firebase
+│   │   └── fix-issue/       # /fix-issue 123 - fix GitHub issue
+│   ├── rules/               # Context-aware coding rules
+│   │   ├── react.md         # Rules for web/**/*.tsx files
+│   │   ├── flutter.md       # Rules for flutter/**/*.dart files
+│   │   └── firebase.md      # Firebase/Firestore patterns
+│   └── agents/              # Custom subagents
+│       ├── code-reviewer.md # Code review after changes
+│       ├── test-runner.md   # Run tests and report
+│       └── explorer.md      # Fast codebase exploration
+├── flutter/                 # Mobile app (iOS & Android)
+│   ├── lib/main.dart        # Main Flutter app with WebView bridge
+│   ├── android/             # Android-specific configs
+│   └── ios/                 # iOS-specific configs
+├── web/                     # React web app
 │   ├── src/
-│   │   ├── App.tsx           # Main app component
-│   │   ├── views/            # All page components
-│   │   ├── services/         # API services (Gemini, translations, etc)
-│   │   └── firebase.ts       # Firebase config
+│   │   ├── App.tsx          # Main app component
+│   │   ├── views/           # All page components
+│   │   ├── components/      # Reusable components (Toast, LazyImage, etc)
+│   │   ├── services/        # API services (Gemini, translations, etc)
+│   │   └── firebase.ts      # Firebase config
 │   └── package.json
-├── codemagic.yaml     # CI/CD config for mobile builds
-└── CLAUDE.md          # This file
+├── codemagic.yaml           # CI/CD config for mobile builds
+└── CLAUDE.md                # This file
 ```
+
+## Claude Code Skills (Slash Commands)
+- `/dev-web` - Start React development server (localhost:5173)
+- `/dev-flutter` - Run Flutter app on device/emulator
+- `/deploy` - Build and deploy web to Firebase Hosting
+- `/fix-issue 123` - Fix a GitHub issue by number
 
 ## Key Technologies
 
