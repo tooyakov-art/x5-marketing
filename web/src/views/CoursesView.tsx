@@ -670,6 +670,7 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
 
   // --- CONSTANTS ---
   const ALL_CATEGORIES = [
+    { id: 'Purchased', label: 'Купленные', color: 'from-emerald-500 to-green-600', icon: CheckCircle2, emoji: '✅' },
     { id: 'Free', label: 'Бесплатные', color: 'from-green-500 to-emerald-600', icon: GraduationCap, emoji: '🆓' },
     { id: 'Design', label: 'Дизайн', color: 'from-purple-500 to-violet-600', icon: Sparkles, emoji: '🎨' },
     { id: 'Marketing', label: 'Маркетинг', color: 'from-orange-500 to-red-500', icon: TrendingUp, emoji: '📈' },
@@ -681,7 +682,6 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
   ];
 
   // --- STATE ---
-  const [showMyCoursesOnly, setShowMyCoursesOnly] = useState(false);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
@@ -695,16 +695,18 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
 
   // Filter courses based on current filters
   const filteredCourses = useMemo(() => {
-    let result = showMyCoursesOnly ? myCourses : courses;
+    let result = courses;
 
-    if (selectedCategoryFilter === 'Free') {
+    if (selectedCategoryFilter === 'Purchased') {
+      result = myCourses;
+    } else if (selectedCategoryFilter === 'Free') {
       result = result.filter(c => c.isFree || c.price === 0);
     } else if (selectedCategoryFilter) {
       result = result.filter(c => c.mainCategory === selectedCategoryFilter);
     }
 
     return result;
-  }, [courses, myCourses, showMyCoursesOnly, selectedCategoryFilter]);
+  }, [courses, myCourses, selectedCategoryFilter]);
 
   // Group courses by mainCategory
   const groupedCourses = useMemo(() => {
@@ -715,7 +717,7 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
       groups[cat.id] = [];
     });
 
-    const coursesToGroup = showMyCoursesOnly ? myCourses : courses;
+    const coursesToGroup = courses;
 
     coursesToGroup.forEach(course => {
       const category = course.mainCategory || 'Other';
@@ -727,90 +729,7 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
     });
 
     return groups;
-  }, [courses, myCourses, showMyCoursesOnly]);
-
-
-  // --- MY COURSES VIEW ---
-  if (showMyCoursesOnly) {
-    return (
-      <div className="flex flex-col h-full animate-fade-in bg-[#f2f4f6] relative">
-        {/* Header */}
-        <div className="px-6 pt-16 pb-6 bg-white shadow-sm shrink-0">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowMyCoursesOnly(false)}
-                className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center"
-              >
-                <ChevronLeft className="text-slate-900" size={22} />
-              </motion.button>
-              <div>
-                <h2 className="text-xl font-extrabold text-slate-900">{t('courses_my_courses', language)}</h2>
-                <p className="text-sm text-slate-500">{myCourses.length} {t('courses_count', language)}</p>
-              </div>
-            </div>
-
-            {!user?.isGuest && (
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleOpenEditor()}
-                className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg"
-              >
-                <Plus size={20} />
-              </motion.button>
-            )}
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 pb-32">
-          {myCourses.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center py-20"
-            >
-              <div className="w-24 h-24 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <GraduationCap size={40} className="text-slate-300" />
-              </div>
-              <h3 className="text-lg font-bold text-slate-900 mb-2">{t('courses_empty_title', language)}</h3>
-              <p className="text-sm text-slate-500 mb-6 max-w-[250px] mx-auto">{t('courses_empty_desc', language)}</p>
-              {!user?.isGuest && (
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleOpenEditor()}
-                  className="px-6 py-3 bg-slate-900 text-white rounded-full font-bold text-sm inline-flex items-center gap-2 mb-3"
-                >
-                  <Plus size={16} /> {t('courses_create_first', language)}
-                </motion.button>
-              )}
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowMyCoursesOnly(false)}
-                className="px-6 py-3 bg-slate-100 text-slate-700 rounded-full font-bold text-sm inline-flex items-center gap-2"
-              >
-                {t('courses_browse', language)} <ArrowRight size={16} />
-              </motion.button>
-            </motion.div>
-          ) : (
-            <div className="space-y-4">
-              {myCourses.map((course, idx) => (
-                <motion.div
-                  key={course.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: idx * 0.05 }}
-                >
-                  {renderMyCourseCard(course)}
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+  }, [courses]);
 
   // --- MAIN LIST VIEW ---
   return (
@@ -832,26 +751,15 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          {!user?.isGuest && (
             <motion.button
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowMyCoursesOnly(true)}
-              className="h-10 px-4 bg-slate-100 rounded-full font-bold text-xs flex items-center gap-2 text-slate-700"
+              onClick={() => handleOpenEditor()}
+              className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg"
             >
-              <UserCheck size={16} />
-              <span>{t('courses_my_courses', language)}</span>
+              <Plus size={20} />
             </motion.button>
-
-            {!user?.isGuest && (
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleOpenEditor()}
-                className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-lg"
-              >
-                <Plus size={20} />
-              </motion.button>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Category Pills - Horizontal Scroll */}

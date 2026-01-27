@@ -270,7 +270,7 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
                   </div>
 
                   {/* Messages */}
-                  <div className="p-3 min-h-[180px] bg-[url('https://web.whatsapp.com/img/bg-chat-tile-dark_a4be512e7195b6b733d9110b408f075d.png')] bg-repeat">
+                  <div className="p-3 min-h-[180px] bg-[#0a1014]">
                     {!showDemo ? (
                       <div className="flex items-center justify-center h-full text-white/40 text-sm">
                         {language === 'ru' ? 'Нажмите "Показать демо"' : 'Click "Show demo"'}

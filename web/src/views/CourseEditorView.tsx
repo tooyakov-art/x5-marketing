@@ -502,240 +502,170 @@ export const CourseEditorView: React.FC<ViewProps> = ({ user, onBack, language =
     </div>
   );
 
+  // Auto-ensure a default category+day exists for flat video list
+  const getDefaultContainer = () => {
+    let cat = course.categories?.[0];
+    if (!cat) {
+      const dayId = generateId();
+      const catId = generateId();
+      cat = { id: catId, title: 'Уроки', order: 1, days: [{ id: dayId, title: 'default', order: 1, lessons: [] }] };
+      setCourse(prev => ({ ...prev, categories: [cat!] }));
+      return { categoryId: catId, dayId };
+    }
+    let day = cat.days?.[0];
+    if (!day) {
+      const dayId = generateId();
+      day = { id: dayId, title: 'default', order: 1, lessons: [] };
+      updateCategory(cat.id, { days: [day] });
+      return { categoryId: cat.id, dayId };
+    }
+    return { categoryId: cat.id, dayId: day.id };
+  };
+
+  // Get all lessons flat
+  const allLessons = (() => {
+    const lessons: { lesson: CourseLesson; categoryId: string; dayId: string }[] = [];
+    course.categories?.forEach(cat => {
+      cat.days?.forEach(day => {
+        day.lessons?.forEach(l => lessons.push({ lesson: l, categoryId: cat.id, dayId: day.id }));
+      });
+    });
+    return lessons;
+  })();
+
   // === RENDER CONTENT TAB ===
-  const renderContentTab = () => (
+  const renderContentTab = () => {
+    const container = getDefaultContainer();
+
+    return (
     <div className="space-y-4 animate-fade-in pb-20">
-      {/* Sections List */}
-      {!selectedCategoryId && (
-        <>
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Разделы</h3>
-            <span className="text-xs font-bold text-slate-900 bg-slate-200 px-2 py-1 rounded-lg">
-              {course.categories?.length || 0}
-            </span>
-          </div>
+      {/* Quick Add Video Button at top */}
+      <button
+        onClick={() => addLesson(container.categoryId, container.dayId)}
+        className="w-full py-5 bg-green-500 text-white rounded-[20px] font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-green-500/20 active:scale-95 transition-all"
+      >
+        <Upload size={18} /> Добавить видео
+      </button>
 
-          <div className="space-y-3">
-            {course.categories?.map((category) => {
-              const lessonCount = category.days?.reduce((acc, d) => acc + (d.lessons?.length || 0), 0) || 0;
-              return (
-                <div
-                  key={category.id}
-                  onClick={() => selectCategory(category)}
-                  className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-                >
-                  <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
-                    <FolderPlus size={20} />
-                  </div>
-                  <div className="flex-1">
-                    <input
-                      value={category.title}
-                      onClick={e => e.stopPropagation()}
-                      onChange={e => updateCategory(category.id, { title: e.target.value })}
-                      className="font-bold text-slate-900 bg-transparent outline-none w-full"
-                    />
-                    <p className="text-xs text-slate-400">{lessonCount} уроков</p>
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); deleteCategory(category.id); }}
-                    className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              );
-            })}
+      {allLessons.length === 0 && (
+        <div className="text-center py-12">
+          <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Video size={32} className="text-slate-300" />
           </div>
-
-          <button
-            onClick={addCategory}
-            className="w-full py-4 border-2 border-dashed border-slate-300 rounded-[20px] text-slate-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition-all active:scale-95"
-          >
-            <FolderPlus size={18} /> Добавить раздел
-          </button>
-        </>
+          <p className="text-sm text-slate-400 font-bold">Нажмите кнопку выше чтобы добавить первое видео</p>
+        </div>
       )}
 
-      {/* Lessons inside Section (Category > default Day > Lessons) */}
-      {selectedCategoryId && currentCategory && currentDay && (
-        <>
-          <button
-            onClick={() => { setSelectedCategoryId(null); setSelectedDayId(null); }}
-            className="flex items-center gap-2 text-slate-500 font-bold text-sm mb-4 hover:text-slate-900"
-          >
-            <ChevronLeft size={16} /> Назад к разделам
-          </button>
-
-          <div className="bg-purple-50 p-4 rounded-[20px] border border-purple-100 mb-4">
-            <input
-              value={currentCategory.title}
-              onChange={e => updateCategory(currentCategory.id, { title: e.target.value })}
-              className="font-bold text-lg text-purple-900 bg-transparent outline-none w-full"
-            />
-          </div>
-
-          {/* Lessons */}
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Уроки (видео)</h3>
-          </div>
-
-          <div className="space-y-3">
-            {currentDay.lessons?.map((lesson) => (
-              <div key={lesson.id} className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center">
-                    <Video size={18} />
-                  </div>
-                  <input
-                    value={lesson.title}
-                    onChange={e => updateLesson(currentCategory.id, currentDay.id, lesson.id, { title: e.target.value })}
-                    className="flex-1 font-bold text-slate-900 bg-transparent outline-none"
-                    placeholder="Название урока"
-                  />
-                  <button 
-                    onClick={() => deleteLesson(currentCategory.id, currentDay.id, lesson.id)}
-                    className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-
-                {/* Video Upload/Preview */}
-                {lesson.videoUrl ? (
-                  <div className="relative rounded-xl overflow-hidden bg-black aspect-video mb-3">
-                    <video src={lesson.videoUrl} className="w-full h-full object-contain" controls />
-                    <button 
-                      onClick={() => updateLesson(currentCategory.id, currentDay.id, lesson.id, { videoUrl: '', storagePath: '' })}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ) : uploadingVideo === lesson.id ? (
-                  <div className="bg-slate-100 rounded-xl p-6 flex flex-col items-center justify-center aspect-video mb-3">
-                    <Loader2 size={32} className="text-slate-400 animate-spin mb-2" />
-                    <div className="w-full max-w-xs bg-slate-200 rounded-full h-2 overflow-hidden">
-                      <div 
-                        className="bg-green-500 h-full transition-all duration-300" 
-                        style={{ width: `${uploadProgress}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-slate-500 mt-2">{Math.round(uploadProgress)}%</p>
-                  </div>
-                ) : (
-                  <label className="block cursor-pointer">
-                    <input
-                      type="file"
-                      accept="video/*"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          handleFileSelect(file, currentCategory.id, currentDay.id, lesson.id);
-                        }
-                      }}
-                    />
-                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center aspect-video mb-3 hover:border-green-400 hover:bg-green-50 transition-all">
-                      <Upload size={32} className="text-slate-300 mb-2" />
-                      <p className="text-xs text-slate-400 font-bold">Загрузить видео</p>
-                      <p className="text-[10px] text-slate-300 mt-1">Более {MAX_FILE_SIZE_MB}MB — предложим сжать</p>
-                    </div>
-                  </label>
-                )}
-
-                {/* YouTube URL (alternative to upload) */}
-                {!lesson.videoUrl && (
-                  <div className="mb-3">
-                    <input
-                      value={lesson.youtubeUrl || ''}
-                      onChange={e => updateLesson(currentCategory.id, currentDay.id, lesson.id, { youtubeUrl: e.target.value })}
-                      placeholder="Или вставьте YouTube ссылку"
-                      className="w-full bg-slate-50 p-3 rounded-xl text-sm border border-slate-200 outline-none"
-                    />
-                  </div>
-                )}
-
-                {/* Description */}
-                <textarea
-                  value={lesson.description || ''}
-                  onChange={e => updateLesson(currentCategory.id, currentDay.id, lesson.id, { description: e.target.value })}
-                  placeholder="Описание урока (опционально)"
-                  className="w-full bg-slate-50 p-3 rounded-xl text-sm border border-slate-200 outline-none resize-none h-16"
-                />
-
-                {/* Free Preview Toggle */}
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
-                  <span className="text-xs font-bold text-slate-500">Бесплатный превью</span>
-                  <button
-                    onClick={() => updateLesson(currentCategory.id, currentDay.id, lesson.id, { isFreePreview: !lesson.isFreePreview })}
-                    className={`w-10 h-6 rounded-full relative transition-colors ${lesson.isFreePreview ? 'bg-green-500' : 'bg-slate-200'}`}
-                  >
-                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${lesson.isFreePreview ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </button>
-                </div>
+      {/* Flat Lessons List */}
+      <div className="space-y-3">
+        {allLessons.map(({ lesson, categoryId, dayId }, idx) => (
+          <div key={lesson.id} className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-green-100 text-green-600 flex items-center justify-center font-bold text-sm">
+                {idx + 1}
               </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => addLesson(currentCategory.id, currentDay.id)}
-            className="w-full py-4 border-2 border-dashed border-slate-300 rounded-[20px] text-slate-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-all active:scale-95 mb-6"
-          >
-            <Video size={18} /> Добавить урок
-          </button>
-
-          {/* Homework Section */}
-          <div className="bg-amber-50 p-4 rounded-[20px] border border-amber-100">
-            <div className="flex items-center gap-2 mb-3">
-              <FileText size={18} className="text-amber-600" />
-              <h4 className="font-bold text-amber-900">Домашнее задание</h4>
+              <input
+                value={lesson.title}
+                onChange={e => updateLesson(categoryId, dayId, lesson.id, { title: e.target.value })}
+                className="flex-1 font-bold text-slate-900 bg-transparent outline-none"
+                placeholder="Название урока"
+              />
+              <button
+                onClick={() => deleteLesson(categoryId, dayId, lesson.id)}
+                className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
 
-            {currentDay.homework ? (
-              <div className="space-y-3">
-                <input
-                  value={currentDay.homework.title}
-                  onChange={e => setDayHomework(currentCategory.id, currentDay.id, {
-                    ...currentDay.homework!,
-                    title: e.target.value
-                  })}
-                  placeholder="Название ДЗ"
-                  className="w-full bg-white p-3 rounded-xl font-bold text-sm border border-amber-200 outline-none"
-                />
-                <textarea
-                  value={currentDay.homework.description}
-                  onChange={e => setDayHomework(currentCategory.id, currentDay.id, {
-                    ...currentDay.homework!,
-                    description: e.target.value
-                  })}
-                  placeholder="Описание задания..."
-                  className="w-full bg-white p-3 rounded-xl text-sm border border-amber-200 outline-none resize-none h-24"
-                />
-                <button 
-                  onClick={() => setDayHomework(currentCategory.id, currentDay.id, undefined)}
-                  className="text-xs text-red-500 font-bold"
+            {/* Video Upload/Preview */}
+            {lesson.videoUrl ? (
+              <div className="relative rounded-xl overflow-hidden bg-black aspect-video mb-3">
+                <video src={lesson.videoUrl} className="w-full h-full object-contain" controls />
+                <button
+                  onClick={() => updateLesson(categoryId, dayId, lesson.id, { videoUrl: '', storagePath: '' })}
+                  className="absolute top-2 right-2 bg-red-500 text-white p-1.5 rounded-full"
                 >
-                  Удалить ДЗ
+                  <X size={14} />
                 </button>
               </div>
+            ) : uploadingVideo === lesson.id ? (
+              <div className="bg-slate-100 rounded-xl p-6 flex flex-col items-center justify-center aspect-video mb-3">
+                <Loader2 size={32} className="text-slate-400 animate-spin mb-2" />
+                <div className="w-full max-w-xs bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-green-500 h-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-2">{Math.round(uploadProgress)}%</p>
+              </div>
             ) : (
-              <button
-                onClick={() => setDayHomework(currentCategory.id, currentDay.id, {
-                  id: generateId(),
-                  title: 'Домашнее задание',
-                  description: '',
-                  type: 'text'
-                })}
-                className="w-full py-3 border-2 border-dashed border-amber-300 rounded-xl text-amber-600 font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-100 transition-all"
-              >
-                <Plus size={16} /> Добавить ДЗ
-              </button>
+              <label className="block cursor-pointer">
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      handleFileSelect(file, categoryId, dayId, lesson.id);
+                    }
+                  }}
+                />
+                <div className="border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center aspect-video mb-3 hover:border-green-400 hover:bg-green-50 transition-all">
+                  <Upload size={32} className="text-slate-300 mb-2" />
+                  <p className="text-xs text-slate-400 font-bold">Загрузить видео</p>
+                  <p className="text-[10px] text-slate-300 mt-1">Более {MAX_FILE_SIZE_MB}MB — предложим сжать</p>
+                </div>
+              </label>
             )}
+
+            {/* YouTube URL (alternative to upload) */}
+            {!lesson.videoUrl && (
+              <div className="mb-3">
+                <input
+                  value={lesson.youtubeUrl || ''}
+                  onChange={e => updateLesson(categoryId, dayId, lesson.id, { youtubeUrl: e.target.value })}
+                  placeholder="Или вставьте YouTube ссылку"
+                  className="w-full bg-slate-50 p-3 rounded-xl text-sm border border-slate-200 outline-none"
+                />
+              </div>
+            )}
+
+            {/* Description */}
+            <textarea
+              value={lesson.description || ''}
+              onChange={e => updateLesson(categoryId, dayId, lesson.id, { description: e.target.value })}
+              placeholder="Описание урока (опционально)"
+              className="w-full bg-slate-50 p-3 rounded-xl text-sm border border-slate-200 outline-none resize-none h-16"
+            />
+
+            {/* Free Preview Toggle */}
+            <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+              <span className="text-xs font-bold text-slate-500">Бесплатный превью</span>
+              <button
+                onClick={() => updateLesson(categoryId, dayId, lesson.id, { isFreePreview: !lesson.isFreePreview })}
+                className={`w-10 h-6 rounded-full relative transition-colors ${lesson.isFreePreview ? 'bg-green-500' : 'bg-slate-200'}`}
+              >
+                <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${lesson.isFreePreview ? 'translate-x-4' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
           </div>
-        </>
+        ))}
+      </div>
+
+      {allLessons.length > 0 && (
+        <button
+          onClick={() => addLesson(container.categoryId, container.dayId)}
+          className="w-full py-4 border-2 border-dashed border-slate-300 rounded-[20px] text-slate-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-green-400 hover:text-green-600 hover:bg-green-50 transition-all active:scale-95"
+        >
+          <Video size={18} /> Ещё видео
+        </button>
       )}
     </div>
-  );
+    );
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#f8fafc] overflow-hidden absolute inset-0 z-50 animate-fade-in">
