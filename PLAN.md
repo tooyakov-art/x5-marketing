@@ -1,72 +1,53 @@
-# X5 Marketing - План Запуска
-
-## ДЕДЛАЙН: СЕГОДНЯ! 🚀
+# X5 Marketing - 26 января 2026
 
 ---
 
-## Цель: Публикация приложения
+## 🔥 СЕЙЧАС — ДЕЛАТЬ ПО ПОРЯДКУ
 
-### 1. Web (Firebase Hosting)
-- [ ] Проверить билд: `cd web && npm run build`
-- [ ] Задеплоить: `firebase deploy --only hosting`
-- [ ] Проверить https://x5marketing.com работает
-
-### 2. Android (Google Play)
-- [ ] Собрать release APK/AAB в Codemagic
-- [ ] Загрузить в Google Play Console
-- [ ] Заполнить описание (ru, en, kz)
-- [ ] Добавить скриншоты
-- [ ] Отправить на review
-
-### 3. iOS (App Store)
-- [ ] Скопировать `flutter/` в репо `5x-flutter`
-- [ ] Запустить Codemagic build
-- [ ] Загрузить в App Store Connect
-- [ ] Заполнить описание
-- [ ] Отправить на review
+1. **Запустить Android билд в Codemagic**
+2. **Проверить кредиты на баги**
+3. **Чаты — общение**
+4. **Чаты — уведомления**
+5. **Академия — дешевый сервер**
+6. **Академия — добавить свой курс**
+7. **Ник нейм**
+8. **Lemon Squeezy**
+9. **Google Pay**
+10. **Дизайн скриншотов (App Store + Google Play)**
+11. **Опубликовать iOS**
+12. **Опубликовать Android**
 
 ---
 
-## Статус компонентов
+## ⏸️ ОТЛОЖЕНО
 
-| Компонент | Статус | Действие |
-|-----------|--------|----------|
-| Web App | ✅ Готов | Deploy |
-| Android | ⏳ Нужен билд | Codemagic |
-| iOS | ⏳ Нужен билд | 5x-flutter repo |
-| Firebase | ✅ Настроен | - |
-| Stripe | ✅ Интегрирован | - |
+- Apple Sign In на iPhone — не работает, вернёмся позже
 
 ---
 
-## Быстрые команды
+## ✅ СЕГОДНЯ СДЕЛАЛИ
 
-```bash
-# Web deploy
-cd web && npm run build && firebase deploy --only hosting --project x5-marketing-app
+1. ✅ Keystore загружен в Codemagic
+2. ✅ Apple включён в Firebase
+3. ✅ Скиллы созданы
+4. ✅ Services ID создан (com.x5marketing.web)
 
-# Проверить статус Codemagic
-# https://codemagic.io/apps
+---
 
-# GitHub Actions (auto-deploy)
-git push origin main
+## 🔑 ДАННЫЕ
+
+```
+Apple:
+  Team ID: F8LA8PC4U6
+  Key ID: MFR62FZ99Q
+  Services ID: com.x5marketing.web
+
+Android:
+  Keystore: x5_upload_key.jks
+  Password: x5marketing2025
+  Alias: x5upload
+
+Версия: 1.0.3+7
 ```
 
----
-
-## Что НЕ делать сегодня
-- ❌ Новые фичи
-- ❌ Рефакторинг
-- ❌ "Улучшения"
-- ❌ Эксперименты
-
-**Только публикация!**
-
----
-
-## Контакты/Ссылки
-- Firebase Console: https://console.firebase.google.com/project/x5-marketing-app
-- Google Play Console: https://play.google.com/console
-- App Store Connect: https://appstoreconnect.apple.com
-- Codemagic: https://codemagic.io
-- 5x-flutter repo: https://github.com/tooyakov-art/5x-flutter
+**Ссылки:** [Firebase](https://console.firebase.google.com/project/x5-marketing-app) · [Codemagic](https://codemagic.io) · [Apple Developer](https://developer.apple.com) · [Google Play](https://play.google.com/console)

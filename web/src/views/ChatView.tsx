@@ -4,6 +4,7 @@ import { Send, Paperclip, Loader2, MessageSquare, ArrowRight, X, ChevronDown, Ch
 import { ChatMessage, ViewProps, Specialist } from '../types';
 import { t } from '../services/translations';
 import { db } from '../firebase';
+import { useToast } from '../components/Toast';
 import firebase from 'firebase/compat/app';
 
 interface ChatViewProps extends ViewProps {
@@ -21,6 +22,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   specialist,
   user
 }) => {
+  const { showToast } = useToast();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
@@ -31,6 +33,14 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const chatId = user && specialist 
     ? [user.id, specialist.id].sort().join('_') 
     : null;
+
+  // Mark messages as read when opening chat
+  useEffect(() => {
+      if (!chatId || !user) return;
+      db.collection('chats').doc(chatId).update({
+          [`unread_${user.id}`]: 0
+      }).catch(() => {}); // ignore if chat doesn't exist yet
+  }, [chatId, user]);
 
   // Real-time listener
   useEffect(() => {
@@ -47,10 +57,16 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   ...doc.data()
               })) as ChatMessage[];
               setMessages(msgs);
+              // Mark as read on new messages too
+              if (user) {
+                  db.collection('chats').doc(chatId).update({
+                      [`unread_${user.id}`]: 0
+                  }).catch(() => {});
+              }
           });
 
       return () => unsubscribe();
-  }, [chatId]);
+  }, [chatId, user]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -86,7 +102,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
     } catch (e) {
         console.error("Failed to send", e);
-        alert("Ошибка отправки: " + (e as any)?.message);
+        showToast("Ошибка отправки: " + (e as any)?.message, "error");
         setInput(text); // Restore text
     } finally {
         setSending(false);
@@ -139,7 +155,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
           )}
           
           {messages.map((msg) => {
-              const isMe = msg.role === 'user' || (msg as any).senderId === user?.id;
+              const isMe = (msg as any).senderId === user?.id;
               return (
                 <div key={msg.id} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'} animate-slide-up`}>
                     <div className={`flex flex-col gap-1 max-w-[80%] ${isMe ? 'items-end' : 'items-start'}`}>

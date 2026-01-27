@@ -43,6 +43,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, langua
     // Nickname editing state
     const [isEditingName, setIsEditingName] = useState(false);
     const [newName, setNewName] = useState(user.name);
+    const [isEditingNickname, setIsEditingNickname] = useState(false);
+    const [newNickname, setNewNickname] = useState(user.nickname || '');
+    const [nicknameError, setNicknameError] = useState('');
 
     const handleSaveName = async () => {
         if (!newName.trim() || newName === user.name) {
@@ -69,6 +72,39 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, langua
         }
 
         setIsEditingName(false);
+    };
+
+    const handleSaveNickname = async () => {
+        const nick = newNickname.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
+        if (!nick || nick.length < 3) {
+            setNicknameError('Минимум 3 символа (a-z, 0-9, _)');
+            return;
+        }
+        if (nick === user.nickname) {
+            setIsEditingNickname(false);
+            return;
+        }
+
+        // Check uniqueness
+        if (user.id && !user.isGuest) {
+            try {
+                const existing = await db.collection('users').where('nickname', '==', nick).get();
+                if (!existing.empty && existing.docs[0].id !== user.id) {
+                    setNicknameError('Этот никнейм уже занят');
+                    return;
+                }
+
+                await db.collection('users').doc(user.id).set({ nickname: nick }, { merge: true });
+                const updatedUser = { ...user, nickname: nick };
+                if (onUpdateUser) onUpdateUser(updatedUser);
+                localStorage.setItem('x5_user', JSON.stringify(updatedUser));
+                setNicknameError('');
+            } catch (e) {
+                console.error("Failed to save nickname", e);
+            }
+        }
+
+        setIsEditingNickname(false);
     };
 
     const handleCancelEdit = () => {
@@ -307,6 +343,36 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, langua
                         <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingName(true)}>
                             <h1 className="text-xl font-black text-slate-900">{user.name}</h1>
                             <Pencil size={14} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+                        </div>
+                    )}
+                    {/* Nickname */}
+                    {isEditingNickname ? (
+                        <div className="flex flex-col items-center gap-1 mt-1">
+                            <div className="flex items-center gap-2">
+                                <span className="text-slate-400 text-sm font-bold">@</span>
+                                <input
+                                    type="text"
+                                    value={newNickname}
+                                    onChange={(e) => { setNewNickname(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '')); setNicknameError(''); }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveNickname();
+                                        if (e.key === 'Escape') { setIsEditingNickname(false); setNicknameError(''); }
+                                    }}
+                                    placeholder="nickname"
+                                    className="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-400 text-center w-36"
+                                    autoFocus
+                                />
+                                <button onClick={handleSaveNickname} className="w-7 h-7 bg-green-500 text-white rounded-full flex items-center justify-center"><Check size={12} /></button>
+                                <button onClick={() => { setIsEditingNickname(false); setNicknameError(''); }} className="w-7 h-7 bg-slate-200 text-slate-600 rounded-full flex items-center justify-center"><X size={12} /></button>
+                            </div>
+                            {nicknameError && <p className="text-[10px] text-red-500 font-bold">{nicknameError}</p>}
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1 mt-0.5 cursor-pointer group" onClick={() => { setIsEditingNickname(true); setNewNickname(user.nickname || ''); }}>
+                            <span className="text-xs font-bold text-slate-400">
+                                {user.nickname ? `@${user.nickname}` : 'Добавить никнейм'}
+                            </span>
+                            <Pencil size={10} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
                         </div>
                     )}
                     <span className={`mt-1 px-3 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${user.plan === 'free' ? 'bg-slate-200 text-slate-500' : 'bg-black text-white'}`}>

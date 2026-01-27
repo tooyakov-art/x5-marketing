@@ -1,7 +1,11 @@
 {
   "permissions": {
+    "allow": [
+      "Read(//d/X/Adilkhan/5x-flutter-temp/**)"
+    ],
     "additionalDirectories": [
-      "d:\\X\\Adilkhan\\x5-marketing-new"
+      "d:\\X\\Adilkhan\\x5-marketing-new",
+      "d:\\X\\Adilkhan\\5x-flutter-temp\\lib"
     ]
   }
 }

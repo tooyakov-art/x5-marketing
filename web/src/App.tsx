@@ -275,15 +275,23 @@ function App() {
             localStorage.setItem('x5_credits', updatedUser.credits.toString());
             localStorage.setItem('x5_user', JSON.stringify(updatedUser));
 
-            // CRITICAL FIX: Persist to Firestore with full data
-            db.collection('users').doc(currentUser.id).set({
-                credits: updatedUser.credits,
-                plan: updatedUser.plan,
-                subscriptionDate: updatedUser.subscriptionDate,
-                subscriptionEndDate: updatedUser.subscriptionEndDate,
-                subscriptionType: updatedUser.subscriptionType,
-                purchaseHistory: updatedUser.purchaseHistory
-            }, { merge: true }).catch((e) => console.error("Firestore update failed", e));
+            // CRITICAL: Atomic transaction for credits
+            const payUserRef = db.collection('users').doc(currentUser.id);
+            db.runTransaction(async (transaction) => {
+                const userDoc = await transaction.get(payUserRef);
+                const currentCredits = userDoc.data()?.credits || 0;
+                transaction.update(payUserRef, {
+                    credits: currentCredits + newCreditsReward,
+                    plan: updatedUser.plan,
+                    subscriptionDate: updatedUser.subscriptionDate,
+                    subscriptionEndDate: updatedUser.subscriptionEndDate,
+                    subscriptionType: updatedUser.subscriptionType,
+                    purchaseHistory: updatedUser.purchaseHistory
+                });
+            }).catch((e) => {
+                console.error("Firestore transaction failed", e);
+                showToastRef.current("Ошибка сохранения оплаты", "error");
+            });
 
             setCurrentView('success');
             setPendingCourse(null);
@@ -317,15 +325,27 @@ function App() {
             localStorage.setItem('x5_user', JSON.stringify(newUser));
             setCurrentView('home');
 
-            // Try to sync to Firestore
+            // Sync to Firestore — don't overwrite existing credits
             if (newUser.id) {
-                db.collection('users').doc(newUser.id).set({
-                    name: newUser.name,
-                    email: newUser.email,
-                    avatar: newUser.avatar,
-                    plan: newUser.plan,
-                    credits: newUser.credits
-                }, { merge: true }).catch((e) => console.error("Firestore sync failed:", e));
+                const authUserRef = db.collection('users').doc(newUser.id);
+                db.runTransaction(async (transaction) => {
+                    const userDoc = await transaction.get(authUserRef);
+                    if (userDoc.exists) {
+                        transaction.update(authUserRef, {
+                            name: newUser.name,
+                            email: newUser.email,
+                            avatar: newUser.avatar
+                        });
+                    } else {
+                        transaction.set(authUserRef, {
+                            name: newUser.name,
+                            email: newUser.email,
+                            avatar: newUser.avatar,
+                            plan: 'free',
+                            credits: 0
+                        });
+                    }
+                }).catch((e) => console.error("Firestore sync failed:", e));
             }
         };
 
@@ -498,6 +518,7 @@ function App() {
                     avatar: firebaseUser.photoURL || undefined,
                     isGuest: isAnon,
                     // Load from Firestore first, fallback to localStorage/defaults
+                    nickname: userData.nickname || undefined,
                     plan: userData.plan || 'free',
                     credits: userData.credits ?? storedCredits ?? 0,
                     purchasedCourseIds: userData.purchasedCourseIds || [],
@@ -622,8 +643,11 @@ function App() {
 
     const handleLogout = () => {
         auth.signOut().catch(() => { });
+        // Clear ALL user data from localStorage
         localStorage.removeItem('x5_user');
-        setUser(GUEST_USER); // Update state immediately
+        localStorage.removeItem('x5_credits');
+        localStorage.removeItem('x5_usage');
+        setUser(GUEST_USER); // GUEST_USER has credits: 0
         setCurrentView('home');
     };
 
@@ -958,7 +982,7 @@ function App() {
                     </div>
 
                     {/* MODERN TAB BAR - Light & Clean */}
-                    {isTabBarVisible && platform !== 'ios' && ['home', 'profile', 'courses', 'hire', 'chats_list'].includes(currentView) && (
+                    {isTabBarVisible && ['home', 'profile', 'courses', 'hire', 'chats_list'].includes(currentView) && (
                         <div className="absolute bottom-0 left-0 w-full z-40 md:hidden pointer-events-none pb-4 px-4">
                             <motion.div
                                 initial={{ y: 100, opacity: 0 }}
@@ -1037,31 +1061,6 @@ function App() {
                         </div>
                     )}
 
-                    {/* iOS Page Indicator (Dots) - 4 tabs only */}
-                    {platform === 'ios' && isTabBarVisible && ['home', 'courses', 'hire', 'profile'].includes(currentView) && (
-                        <div className="absolute bottom-0 left-0 w-full z-40 pb-6 pointer-events-none md:hidden">
-                            <div className="flex items-center justify-center gap-2">
-                                {['home', 'courses', 'hire', 'profile'].map((tab) => (
-                                    <motion.div
-                                        key={tab}
-                                        className={`rounded-full transition-all ${
-                                            currentView === tab
-                                                ? 'w-6 h-2 bg-slate-900'
-                                                : 'w-2 h-2 bg-slate-300'
-                                        }`}
-                                        layoutId={currentView === tab ? "iosPageIndicator" : undefined}
-                                        transition={{ type: 'spring', damping: 20 }}
-                                    />
-                                ))}
-                            </div>
-                            <p className="text-center text-[10px] text-slate-400 mt-2 font-medium">
-                                {currentView === 'home' && 'Главная'}
-                                {currentView === 'courses' && 'Курсы'}
-                                {currentView === 'hire' && 'Биржа'}
-                                {currentView === 'profile' && 'Профиль'}
-                            </p>
-                        </div>
-                    )}
                 </div>
             </div>
 
