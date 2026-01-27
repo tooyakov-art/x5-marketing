@@ -448,7 +448,17 @@ export const CourseEditorView: React.FC<ViewProps> = ({ user, onBack, language =
               value={course.price}
               onChange={e => setCourse({ ...course, price: parseInt(e.target.value) || 0 })}
               className="w-full bg-slate-50 pl-10 pr-4 py-4 rounded-xl font-black text-xl border border-slate-200 outline-none focus:border-slate-900"
+              disabled={course.isFree}
             />
+          </div>
+          <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+            <span className="text-xs font-bold text-slate-500">Бесплатный курс</span>
+            <button
+              onClick={() => setCourse({ ...course, isFree: !course.isFree, price: !course.isFree ? 0 : course.price })}
+              className={`w-10 h-6 rounded-full relative transition-colors ${course.isFree ? 'bg-green-500' : 'bg-slate-200'}`}
+            >
+              <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${course.isFree ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            </button>
           </div>
         </div>
 
@@ -633,6 +643,18 @@ export const CourseEditorView: React.FC<ViewProps> = ({ user, onBack, language =
                   </label>
                 )}
 
+                {/* YouTube URL (alternative to upload) */}
+                {!lesson.videoUrl && (
+                  <div className="mb-3">
+                    <input
+                      value={lesson.youtubeUrl || ''}
+                      onChange={e => updateLesson(currentCategory.id, currentDay.id, lesson.id, { youtubeUrl: e.target.value })}
+                      placeholder="Или вставьте YouTube ссылку"
+                      className="w-full bg-slate-50 p-3 rounded-xl text-sm border border-slate-200 outline-none"
+                    />
+                  </div>
+                )}
+
                 {/* Description */}
                 <textarea
                   value={lesson.description || ''}
@@ -640,6 +662,17 @@ export const CourseEditorView: React.FC<ViewProps> = ({ user, onBack, language =
                   placeholder="Описание урока (опционально)"
                   className="w-full bg-slate-50 p-3 rounded-xl text-sm border border-slate-200 outline-none resize-none h-16"
                 />
+
+                {/* Free Preview Toggle */}
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100">
+                  <span className="text-xs font-bold text-slate-500">Бесплатный превью</span>
+                  <button
+                    onClick={() => updateLesson(currentCategory.id, currentDay.id, lesson.id, { isFreePreview: !lesson.isFreePreview })}
+                    className={`w-10 h-6 rounded-full relative transition-colors ${lesson.isFreePreview ? 'bg-green-500' : 'bg-slate-200'}`}
+                  >
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform ${lesson.isFreePreview ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>

@@ -40,18 +40,19 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
 
     const unsubscribe = db.collection('whatsapp_bots')
       .where('userId', '==', user.id)
-      .orderBy('createdAt', 'desc')
       .onSnapshot(
         (snapshot) => {
           const bots = snapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data()
           })) as WhatsAppBot[];
+          bots.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
           setMyBots(bots);
           setLoadingBots(false);
         },
         (error) => {
           console.error('Error loading bots:', error);
+          setMyBots([]);
           setLoadingBots(false);
         }
       );
@@ -77,31 +78,32 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
 
   // Demo chat simulation
   useEffect(() => {
-    if (showDemo && demoMessages.length === 0) {
-      const messages = language === 'ru' ? [
-        { text: 'Привет! Сколько стоит доставка?', isBot: false },
-        { text: 'Здравствуйте! 👋 Доставка по городу бесплатная при заказе от 5000₸. Стандартная доставка - 1000₸. Чем еще могу помочь?', isBot: true },
-        { text: 'А когда доставите?', isBot: false },
-        { text: 'Доставка в течение 1-2 часов! 🚀 Хотите оформить заказ?', isBot: true },
-      ] : [
-        { text: 'Hi! How much is delivery?', isBot: false },
-        { text: 'Hello! 👋 Free delivery for orders over $50. Standard delivery - $5. How else can I help?', isBot: true },
-        { text: 'When will it arrive?', isBot: false },
-        { text: 'Delivery within 1-2 hours! 🚀 Would you like to place an order?', isBot: true },
-      ];
+    if (!showDemo) return;
 
-      let index = 0;
-      const interval = setInterval(() => {
-        if (index < messages.length) {
-          setDemoMessages(prev => [...prev, messages[index]]);
-          index++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 1000);
+    setDemoMessages([]);
+    const messages = language === 'ru' ? [
+      { text: 'Привет! Сколько стоит доставка?', isBot: false },
+      { text: 'Здравствуйте! 👋 Доставка по городу бесплатная при заказе от 5000₸. Стандартная доставка - 1000₸. Чем еще могу помочь?', isBot: true },
+      { text: 'А когда доставите?', isBot: false },
+      { text: 'Доставка в течение 1-2 часов! 🚀 Хотите оформить заказ?', isBot: true },
+    ] : [
+      { text: 'Hi! How much is delivery?', isBot: false },
+      { text: 'Hello! 👋 Free delivery for orders over $50. Standard delivery - $5. How else can I help?', isBot: true },
+      { text: 'When will it arrive?', isBot: false },
+      { text: 'Delivery within 1-2 hours! 🚀 Would you like to place an order?', isBot: true },
+    ];
 
-      return () => clearInterval(interval);
-    }
+    let index = 0;
+    const interval = setInterval(() => {
+      if (index < messages.length) {
+        setDemoMessages(prev => [...prev, messages[index]]);
+        index++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
   }, [showDemo, language]);
 
   const handleCreate = async () => {
@@ -406,7 +408,7 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
                           </div>
                         </div>
                         <div className="mt-2 text-xs text-gray-400">
-                          {businessTypes.find(t => t.id === bot.businessType)?.emoji} {businessTypes.find(t => t.id === bot.businessType)?.label}
+                          {businessTypes.find(bt => bt.id === bot.businessType)?.emoji} {businessTypes.find(bt => bt.id === bot.businessType)?.label}
                           {' • '}
                           {new Date(bot.createdAt).toLocaleDateString()}
                         </div>
@@ -585,7 +587,7 @@ export const WhatsAppBotView: React.FC<ViewProps> = ({ onBack, user, language = 
                   </div>
                 </div>
                 <div className="text-xs text-gray-400">
-                  {businessTypes.find(t => t.id === businessType)?.emoji} {businessTypes.find(t => t.id === businessType)?.label}
+                  {businessTypes.find(bt => bt.id === businessType)?.emoji} {businessTypes.find(bt => bt.id === businessType)?.label}
                 </div>
               </div>
 

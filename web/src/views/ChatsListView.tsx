@@ -22,25 +22,40 @@ export const ChatsListView: React.FC<ChatsListViewProps> = ({ onBack, chats, onS
         }
         setIsSearching(true);
         try {
-            // Search users by name (case-insensitive partial match via Firestore)
-            const snapshot = await db.collection('users')
-                .where('name', '>=', searchQuery)
-                .where('name', '<=', searchQuery + '\uf8ff')
-                .limit(10)
-                .get();
+            // Search by name AND nickname in parallel
+            const query = searchQuery.trim();
+            const [nameSnap, nicknameSnap] = await Promise.all([
+                db.collection('users')
+                    .where('name', '>=', query)
+                    .where('name', '<=', query + '\uf8ff')
+                    .limit(10)
+                    .get(),
+                db.collection('users')
+                    .where('nickname', '>=', query.toLowerCase())
+                    .where('nickname', '<=', query.toLowerCase() + '\uf8ff')
+                    .limit(10)
+                    .get()
+            ]);
 
-            const results: Specialist[] = snapshot.docs
-                .filter(doc => doc.id !== currentUserId)
-                .map(doc => ({
+            // Merge results, deduplicate by doc.id
+            const seen = new Set<string>();
+            const results: Specialist[] = [];
+            const allDocs = [...nameSnap.docs, ...nicknameSnap.docs];
+            for (const doc of allDocs) {
+                if (doc.id === currentUserId || seen.has(doc.id)) continue;
+                seen.add(doc.id);
+                const data = doc.data();
+                results.push({
                     id: doc.id,
-                    name: doc.data().name || 'User',
-                    avatar: doc.data().avatar,
-                    role: 'User',
+                    name: data.name || 'User',
+                    avatar: data.avatar,
+                    role: data.nickname ? `@${data.nickname}` : 'User',
                     online: false,
                     rating: 0,
                     price: '0',
                     skills: []
-                }));
+                });
+            }
             setSearchResults(results);
         } catch (e) {
             console.error("Search error", e);

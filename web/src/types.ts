@@ -2,7 +2,7 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
 
-export type ViewState = 'home' | 'courses' | 'course_editor' | 'profile' | 'photo' | 'design' | 'contract' | 'video' | 'admin' | 'admin_key' | 'all_tech' | 'chat' | 'instagram' | 'video_gen' | 'success' | 'payment_mock' | 'logo' | 'branding' | 'analytics' | 'language' | 'hire' | 'chats_list' | 'paywall' | 'whatsapp_bot';
+export type ViewState = 'home' | 'courses' | 'course_editor' | 'profile' | 'photo' | 'design' | 'contract' | 'video' | 'admin' | 'admin_key' | 'all_tech' | 'chat' | 'instagram' | 'video_gen' | 'success' | 'payment_mock' | 'logo' | 'branding' | 'analytics' | 'language' | 'hire' | 'chats_list' | 'paywall' | 'whatsapp_bot' | 'business';
 export type Language = 'ru' | 'en' | 'kz' | 'tr' | 'cn' | 'ae' | 'es' | 'fr' | 'de' | 'it' | 'jp';
 export type Platform = 'web' | 'ios' | 'android';
 
@@ -42,6 +42,8 @@ export interface User {
   services?: string[];
   createdAt?: string;
   isGuest: boolean;
+  isCompany?: boolean; // Company mode toggle
+  companyName?: string;
   plan: 'free' | 'pro' | 'black';
   credits: number;
   purchasedCourseIds?: string[]; // Track individual purchases
@@ -94,6 +96,8 @@ export interface CourseLesson {
   storagePath?: string; // Firebase Storage path
   duration?: string;
   order: number;
+  isFreePreview?: boolean; // Free preview lesson (available without purchase)
+  youtubeUrl?: string; // YouTube video URL (for free courses)
 }
 
 // День урока
@@ -145,6 +149,7 @@ export interface Course {
   features?: string[];
   locked?: boolean;
   mainCategory?: string; // "Design", "Marketing", etc.
+  isFree?: boolean; // Free course (no purchase needed)
 }
 
 export interface UsageState {

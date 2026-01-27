@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User as UserIcon, Crown, Settings, Zap, History, ChevronRight, Key, LogIn, Briefcase, Trash2, Star, Shield, Pencil, Check, X, Calendar, Plus, FileText } from 'lucide-react';
+import { User as UserIcon, Crown, Settings, Zap, History, ChevronRight, Key, LogIn, Briefcase, Trash2, Star, Shield, Pencil, Check, X, Calendar, Plus, FileText, Building2 } from 'lucide-react';
 import { User, Language, HistoryItem, ViewState, UsageState, Platform } from '../types';
 import { subscribeToHistory } from '../services/historyService';
 import { t } from '../services/translations';
@@ -440,6 +440,47 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, langua
                         <span className="text-[9px] text-slate-400 font-bold mt-1 tracking-tight">
                             Since: {new Date(user.subscriptionDate).toLocaleDateString()}
                         </span>
+                    )}
+                </div>
+            )}
+
+            {/* Company Mode Toggle */}
+            {!user.isGuest && (
+                <div className="w-full bg-white rounded-[28px] p-4 shadow-lg shadow-slate-200/40 border border-slate-100 mb-5 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${user.isCompany ? 'bg-blue-100' : 'bg-slate-100'}`}>
+                                <Building2 size={18} className={user.isCompany ? 'text-blue-600' : 'text-slate-400'} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-slate-900">Я — компания</p>
+                                <p className="text-[10px] text-slate-500">Режим для бизнеса</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={async () => {
+                                const newVal = !user.isCompany;
+                                if (user.id && !user.isGuest) {
+                                    try {
+                                        await db.collection('users').doc(user.id).set({ isCompany: newVal }, { merge: true });
+                                        const updatedUser = { ...user, isCompany: newVal };
+                                        if (onUpdateUser) onUpdateUser(updatedUser);
+                                        localStorage.setItem('x5_user', JSON.stringify(updatedUser));
+                                    } catch (e) { console.error("Failed to toggle company", e); }
+                                }
+                            }}
+                            className={`w-12 h-7 rounded-full relative transition-colors ${user.isCompany ? 'bg-blue-500' : 'bg-slate-200'}`}
+                        >
+                            <div className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-transform ${user.isCompany ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                        </button>
+                    </div>
+                    {user.isCompany && (
+                        <button
+                            onClick={() => { if (onNavigate) onNavigate('business' as any); }}
+                            className="mt-3 w-full py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+                        >
+                            <Building2 size={14} /> Посмотреть лендинг X5 для бизнеса
+                        </button>
                     )}
                 </div>
             )}

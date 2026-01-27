@@ -25,6 +25,7 @@ import { PaywallView } from './views/PaywallView';
 import { CourseEditorView } from './views/CourseEditorView';
 import { WhatsAppBotView } from './views/WhatsAppBotView';
 import { RedirectView } from './views/RedirectView';
+import { BusinessLandingView } from './views/BusinessLandingView';
 import { ViewState, User, Language, HistoryItem, AppConfig, ChatMessage, UsageState, Course, Platform, Specialist } from './types';
 import { auth, db } from './firebase';
 import { detectPlatform } from './utils/platformUtils';
@@ -523,6 +524,8 @@ function App() {
                     bio: userData.bio || undefined,
                     services: userData.services || undefined,
                     createdAt: userData.createdAt || undefined,
+                    isCompany: userData.isCompany || false,
+                    companyName: userData.companyName || undefined,
                     plan: userData.plan || 'free',
                     credits: userData.credits ?? storedCredits ?? 0,
                     purchasedCourseIds: userData.purchasedCourseIds || [],
@@ -978,6 +981,12 @@ function App() {
                                     user={user}
                                     language={language}
                                     onBack={() => handleNavigate('home')}
+                                    onNavigate={handleNavigate}
+                                />
+                            )}
+                            {currentView === 'business' && (
+                                <BusinessLandingView
+                                    onBack={() => handleNavigate('profile')}
                                     onNavigate={handleNavigate}
                                 />
                             )}

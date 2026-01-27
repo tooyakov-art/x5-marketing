@@ -215,18 +215,35 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
 
         {/* Sticky CTA Bar */}
         <div className="fixed bottom-0 left-0 w-full p-4 pb-8 bg-white/90 backdrop-blur-xl border-t border-slate-100 z-40 flex items-center justify-between shadow-2xl animate-slide-up">
-          <div>
-            <p className="text-2xl font-black text-slate-900 leading-none flex items-center gap-1">
-              {(selectedCourse.price || 0).toLocaleString()} <Zap size={20} className="text-yellow-500 fill-yellow-500" />
-            </p>
-          </div>
-          <button
-            onClick={() => onBuyCourse && onBuyCourse(selectedCourse)}
-            className="bg-slate-900 text-white px-8 py-4 rounded-[24px] font-bold text-sm shadow-xl shadow-slate-900/20 active:scale-95 transition-transform flex items-center gap-2"
-          >
-            <span>Купить курс</span>
-            <ChevronRight size={16} />
-          </button>
+          {selectedCourse.isFree || selectedCourse.price === 0 ? (
+            <>
+              <div>
+                <p className="text-lg font-black text-green-600 leading-none">БЕСПЛАТНО</p>
+              </div>
+              <button
+                onClick={() => { setViewState('course_detail'); }}
+                className="bg-green-600 text-white px-8 py-4 rounded-[24px] font-bold text-sm shadow-xl shadow-green-600/20 active:scale-95 transition-transform flex items-center gap-2"
+              >
+                <span>Смотреть бесплатно</span>
+                <PlayCircle size={16} />
+              </button>
+            </>
+          ) : (
+            <>
+              <div>
+                <p className="text-2xl font-black text-slate-900 leading-none flex items-center gap-1">
+                  {(selectedCourse.price || 0).toLocaleString()} <Zap size={20} className="text-yellow-500 fill-yellow-500" />
+                </p>
+              </div>
+              <button
+                onClick={() => onBuyCourse && onBuyCourse(selectedCourse)}
+                className="bg-slate-900 text-white px-8 py-4 rounded-[24px] font-bold text-sm shadow-xl shadow-slate-900/20 active:scale-95 transition-transform flex items-center gap-2"
+              >
+                <span>Купить курс</span>
+                <ChevronRight size={16} />
+              </button>
+            </>
+          )}
         </div>
       </div>
     );
@@ -364,27 +381,39 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
         <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-4 px-2">Уроки</h3>
 
         <div className="space-y-3 mb-6">
-          {selectedDay.lessons?.map((lesson, idx) => (
-            <button
-              key={lesson.id}
-              onClick={() => handleLessonClick(lesson)}
-              className="w-full bg-white p-4 rounded-[24px] flex items-center gap-4 text-left transition-all border border-slate-100 hover:shadow-md active:scale-[0.98] group"
-            >
-              <div className="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-green-600 group-hover:text-white transition-colors">
-                {idx + 1}
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-bold text-slate-900 leading-tight mb-1">{lesson.title}</h4>
-                {lesson.duration && (
-                  <div className="flex items-center gap-1">
-                    <Clock size={10} className="text-slate-400" />
-                    <span className="text-[10px] text-slate-400">{lesson.duration}</span>
+          {selectedDay.lessons?.map((lesson, idx) => {
+            const canWatch = hasAccess(selectedCourse) || lesson.isFreePreview;
+            return (
+              <button
+                key={lesson.id}
+                onClick={() => canWatch ? handleLessonClick(lesson) : null}
+                className={`w-full bg-white p-4 rounded-[24px] flex items-center gap-4 text-left transition-all border border-slate-100 group ${canWatch ? 'hover:shadow-md active:scale-[0.98]' : 'opacity-60'}`}
+              >
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 transition-colors ${canWatch ? 'bg-green-100 text-green-600 group-hover:bg-green-600 group-hover:text-white' : 'bg-slate-100 text-slate-400'}`}>
+                  {canWatch ? idx + 1 : <Lock size={14} />}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-slate-900 leading-tight">{lesson.title}</h4>
+                    {lesson.isFreePreview && (
+                      <span className="bg-green-100 text-green-700 text-[9px] font-bold px-2 py-0.5 rounded-full">FREE</span>
+                    )}
                   </div>
+                  {lesson.duration && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <Clock size={10} className="text-slate-400" />
+                      <span className="text-[10px] text-slate-400">{lesson.duration}</span>
+                    </div>
+                  )}
+                </div>
+                {canWatch ? (
+                  <PlayCircle size={24} className="text-slate-300 group-hover:text-green-500" />
+                ) : (
+                  <Lock size={18} className="text-slate-300" />
                 )}
-              </div>
-              <PlayCircle size={24} className="text-slate-300 group-hover:text-green-500" />
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
 
         {/* Homework Section */}
@@ -422,25 +451,88 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
     );
   }
 
+  // --- Helper: Get YouTube embed URL ---
+  const getYoutubeEmbed = (url: string) => {
+    const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{11})/);
+    return match ? `https://www.youtube.com/embed/${match[1]}?autoplay=1&rel=0` : null;
+  };
+
+  // --- Helper: Get all lessons flat from course ---
+  const getAllLessons = (course: Course): CourseLesson[] => {
+    const lessons: CourseLesson[] = [];
+    course.categories?.forEach(cat => {
+      cat.days?.forEach(day => {
+        day.lessons?.forEach(l => lessons.push(l));
+      });
+    });
+    return lessons;
+  };
+
+  // --- Helper: Get next lesson ---
+  const getNextLesson = (): CourseLesson | null => {
+    if (!selectedCourse || !selectedLesson) return null;
+    const all = getAllLessons(selectedCourse);
+    const idx = all.findIndex(l => l.id === selectedLesson.id);
+    return idx >= 0 && idx < all.length - 1 ? all[idx + 1] : null;
+  };
+
+  // --- Helper: Check if course has access ---
+  const hasAccess = (course: Course) => {
+    if (course.isFree) return true;
+    if (course.authorId === user?.id) return true;
+    if (user?.purchasedCourseIds?.includes(course.id)) return true;
+    return false;
+  };
+
   // --- 5. LESSON PLAYER ---
   if (viewState === 'lesson_player' && selectedLesson && selectedCourse) {
+    const nextLesson = getNextLesson();
+    const isPreview = selectedLesson.isFreePreview && !hasAccess(selectedCourse);
+    const youtubeEmbed = selectedLesson.youtubeUrl ? getYoutubeEmbed(selectedLesson.youtubeUrl) : null;
+
     return (
       <div className="flex flex-col h-full animate-fade-in relative z-50 bg-black text-white">
-        {/* Helper for safe area background to prevent white notches */}
         <div className="absolute top-0 left-0 right-0 h-[50px] bg-black z-[-1]" />
 
         <div className="w-full aspect-video bg-black relative shadow-2xl shrink-0 pt-[env(safe-area-inset-top)]">
-          <video src={selectedLesson.videoUrl} controls className="w-full h-full object-contain" autoPlay playsInline />
+          {youtubeEmbed ? (
+            <iframe
+              src={youtubeEmbed}
+              className="w-full h-full"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              frameBorder="0"
+            />
+          ) : (
+            <video
+              src={selectedLesson.videoUrl}
+              controls
+              className="w-full h-full object-contain"
+              autoPlay
+              playsInline
+              onEnded={() => {
+                // If this was a free preview, show paywall prompt
+                if (isPreview && nextLesson && !nextLesson.isFreePreview) {
+                  // The paywall card below will show
+                }
+              }}
+            />
+          )}
           <button onClick={handleInternalBack} className="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white border border-white/20 z-50 active:scale-95 transition-transform hover:bg-white hover:text-black mt-[env(safe-area-inset-top)]">
             <ChevronLeft size={20} />
           </button>
+          {selectedLesson.isFreePreview && (
+            <div className="absolute top-4 right-4 bg-green-500 text-white px-3 py-1 rounded-full text-[10px] font-bold mt-[env(safe-area-inset-top)]">
+              БЕСПЛАТНО
+            </div>
+          )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 bg-[#0f1115] text-white rounded-t-[32px] -mt-6 relative z-10 border-t border-white/5 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-          <div className="mb-8">
+          <div className="mb-6">
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">{selectedCourse.title}</span>
             <h1 className="text-2xl font-black text-white leading-tight mb-4">{selectedLesson.title}</h1>
-            
+
             {selectedLesson.description ? (
               <div className="p-5 rounded-2xl bg-white/5 border border-white/10">
                 <p className="text-sm text-slate-300 leading-relaxed font-medium">{selectedLesson.description}</p>
@@ -448,12 +540,46 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
             ) : (
                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3 opacity-50">
                  <Video size={18} className="text-slate-500" />
-                 <p className="text-xs text-slate-500 font-bold">Описание к этому уроку отсутствует. Наслаждайтесь просмотром!</p>
+                 <p className="text-xs text-slate-500 font-bold">Описание к этому уроку отсутствует.</p>
                </div>
             )}
           </div>
 
-          {/* Navigation / Materials helper */}
+          {/* Paywall after free preview */}
+          {isPreview && nextLesson && !nextLesson.isFreePreview && (
+            <div className="mb-6 bg-gradient-to-br from-blue-600 to-purple-600 p-6 rounded-2xl">
+              <h3 className="text-lg font-black text-white mb-2">Продолжить курс?</h3>
+              <p className="text-sm text-blue-100 mb-4">Чтобы открыть все уроки, оплатите курс.</p>
+              <button
+                onClick={() => { if (onBuyCourse && selectedCourse) onBuyCourse(selectedCourse); }}
+                className="w-full py-3 bg-white text-blue-600 rounded-xl font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              >
+                <Zap size={16} className="text-yellow-500 fill-yellow-500" />
+                Купить за {selectedCourse.price} кредитов
+              </button>
+            </div>
+          )}
+
+          {/* Next lesson button */}
+          {nextLesson && (hasAccess(selectedCourse) || nextLesson.isFreePreview) && (
+            <div className="mb-6">
+              <button
+                onClick={() => setSelectedLesson(nextLesson)}
+                className="w-full p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors flex items-center gap-4 group active:scale-[0.98]"
+              >
+                <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center group-hover:bg-green-500 group-hover:text-white transition-colors">
+                  <PlayCircle size={18} />
+                </div>
+                <div className="flex-1 text-left">
+                  <h4 className="text-sm font-bold text-white mb-0.5">Следующий урок</h4>
+                  <p className="text-xs text-slate-400">{nextLesson.title}</p>
+                </div>
+                <ArrowRight size={16} className="text-slate-600 group-hover:text-white" />
+              </button>
+            </div>
+          )}
+
+          {/* Navigation back */}
           <div className="flex flex-col gap-3 pb-20">
              <h3 className="text-xs font-bold text-slate-600 uppercase tracking-widest px-1">Навигация</h3>
              <div className="p-4 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors cursor-pointer flex items-center gap-4 group active:scale-[0.98]" onClick={handleInternalBack}>
@@ -544,6 +670,7 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
 
   // --- CONSTANTS ---
   const ALL_CATEGORIES = [
+    { id: 'Free', label: 'Бесплатные', color: 'from-green-500 to-emerald-600', icon: GraduationCap, emoji: '🆓' },
     { id: 'Design', label: 'Дизайн', color: 'from-purple-500 to-violet-600', icon: Sparkles, emoji: '🎨' },
     { id: 'Marketing', label: 'Маркетинг', color: 'from-orange-500 to-red-500', icon: TrendingUp, emoji: '📈' },
     { id: 'Programming', label: 'Программирование', color: 'from-blue-500 to-cyan-500', icon: Layers, emoji: '💻' },
@@ -570,7 +697,9 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
   const filteredCourses = useMemo(() => {
     let result = showMyCoursesOnly ? myCourses : courses;
 
-    if (selectedCategoryFilter) {
+    if (selectedCategoryFilter === 'Free') {
+      result = result.filter(c => c.isFree || c.price === 0);
+    } else if (selectedCategoryFilter) {
       result = result.filter(c => c.mainCategory === selectedCategoryFilter);
     }
 
