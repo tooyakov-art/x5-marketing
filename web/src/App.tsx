@@ -342,7 +342,8 @@ function App() {
                             email: newUser.email,
                             avatar: newUser.avatar,
                             plan: 'free',
-                            credits: 0
+                            credits: 0,
+                            createdAt: new Date().toISOString()
                         });
                     }
                 }).catch((e) => console.error("Firestore sync failed:", e));
@@ -519,6 +520,9 @@ function App() {
                     isGuest: isAnon,
                     // Load from Firestore first, fallback to localStorage/defaults
                     nickname: userData.nickname || undefined,
+                    bio: userData.bio || undefined,
+                    services: userData.services || undefined,
+                    createdAt: userData.createdAt || undefined,
                     plan: userData.plan || 'free',
                     credits: userData.credits ?? storedCredits ?? 0,
                     purchasedCourseIds: userData.purchasedCourseIds || [],

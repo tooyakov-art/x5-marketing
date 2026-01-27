@@ -38,6 +38,9 @@ export interface User {
   nickname?: string;
   email?: string;
   avatar?: string;
+  bio?: string;
+  services?: string[];
+  createdAt?: string;
   isGuest: boolean;
   plan: 'free' | 'pro' | 'black';
   credits: number;

@@ -28,7 +28,7 @@ export const CourseEditorView: React.FC<ViewProps> = ({ user, onBack, language =
   const [uploadingVideo, setUploadingVideo] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   
-  // Navigation state
+  // Navigation state (simplified: category > lessons, no day selection)
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedDayId, setSelectedDayId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'info' | 'content'>('info');
@@ -198,20 +198,51 @@ export const CourseEditorView: React.FC<ViewProps> = ({ user, onBack, language =
     }
   };
 
+  // Helper: ensure category has a default day (hidden from user)
+  const ensureDefaultDay = (category: CourseCategory): CourseDay => {
+    if (category.days && category.days.length > 0) return category.days[0];
+    const defaultDay: CourseDay = {
+      id: generateId(),
+      title: 'default',
+      order: 1,
+      lessons: []
+    };
+    updateCategory(category.id, { days: [defaultDay] });
+    return defaultDay;
+  };
+
+  // Select category and auto-open lessons (skip day selection)
+  const selectCategory = (cat: CourseCategory) => {
+    const day = cat.days?.[0];
+    setSelectedCategoryId(cat.id);
+    if (day) {
+      setSelectedDayId(day.id);
+    } else {
+      // Create default day on first open
+      const newDay: CourseDay = {
+        id: generateId(),
+        title: 'default',
+        order: 1,
+        lessons: []
+      };
+      updateCategory(cat.id, { days: [newDay] });
+      setSelectedDayId(newDay.id);
+    }
+  };
+
   // === CATEGORY CRUD ===
   const addCategory = () => {
+    const defaultDayId = generateId();
     const newCategory: CourseCategory = {
       id: generateId(),
       title: 'Новый раздел',
       order: (course.categories?.length || 0) + 1,
-      days: []
+      days: [{ id: defaultDayId, title: 'default', order: 1, lessons: [] }]
     };
     setCourse(prev => ({
       ...prev,
       categories: [...(prev.categories || []), newCategory]
     }));
-    // Removed auto-selection: setSelectedCategoryId(newCategory.id);
-    // setSelectedDayId(null);
   };
 
   const updateCategory = (id: string, updates: Partial<CourseCategory>) => {
@@ -464,62 +495,65 @@ export const CourseEditorView: React.FC<ViewProps> = ({ user, onBack, language =
   // === RENDER CONTENT TAB ===
   const renderContentTab = () => (
     <div className="space-y-4 animate-fade-in pb-20">
-      {/* Categories List */}
+      {/* Sections List */}
       {!selectedCategoryId && (
         <>
           <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Категории (папки)</h3>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Разделы</h3>
             <span className="text-xs font-bold text-slate-900 bg-slate-200 px-2 py-1 rounded-lg">
               {course.categories?.length || 0}
             </span>
           </div>
 
           <div className="space-y-3">
-            {course.categories?.map((category, idx) => (
-              <div 
-                key={category.id}
-                onClick={() => setSelectedCategoryId(category.id)}
-                className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-              >
-                <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
-                  <FolderPlus size={20} />
-                </div>
-                <div className="flex-1">
-                  <input
-                    value={category.title}
-                    onClick={e => e.stopPropagation()}
-                    onChange={e => updateCategory(category.id, { title: e.target.value })}
-                    className="font-bold text-slate-900 bg-transparent outline-none w-full"
-                  />
-                  <p className="text-xs text-slate-400">{category.days?.length || 0} дней</p>
-                </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); deleteCategory(category.id); }}
-                  className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+            {course.categories?.map((category) => {
+              const lessonCount = category.days?.reduce((acc, d) => acc + (d.lessons?.length || 0), 0) || 0;
+              return (
+                <div
+                  key={category.id}
+                  onClick={() => selectCategory(category)}
+                  className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
                 >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
+                  <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                    <FolderPlus size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      value={category.title}
+                      onClick={e => e.stopPropagation()}
+                      onChange={e => updateCategory(category.id, { title: e.target.value })}
+                      className="font-bold text-slate-900 bg-transparent outline-none w-full"
+                    />
+                    <p className="text-xs text-slate-400">{lessonCount} уроков</p>
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteCategory(category.id); }}
+                    className="p-2 text-slate-300 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
           <button
             onClick={addCategory}
             className="w-full py-4 border-2 border-dashed border-slate-300 rounded-[20px] text-slate-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50 transition-all active:scale-95"
           >
-            <FolderPlus size={18} /> Добавить категорию
+            <FolderPlus size={18} /> Добавить раздел
           </button>
         </>
       )}
 
-      {/* Days List inside Category */}
-      {selectedCategoryId && !selectedDayId && currentCategory && (
+      {/* Lessons inside Section (Category > default Day > Lessons) */}
+      {selectedCategoryId && currentCategory && currentDay && (
         <>
-          <button 
-            onClick={() => setSelectedCategoryId(null)}
+          <button
+            onClick={() => { setSelectedCategoryId(null); setSelectedDayId(null); }}
             className="flex items-center gap-2 text-slate-500 font-bold text-sm mb-4 hover:text-slate-900"
           >
-            <ChevronLeft size={16} /> Назад к категориям
+            <ChevronLeft size={16} /> Назад к разделам
           </button>
 
           <div className="bg-purple-50 p-4 rounded-[20px] border border-purple-100 mb-4">
@@ -527,72 +561,6 @@ export const CourseEditorView: React.FC<ViewProps> = ({ user, onBack, language =
               value={currentCategory.title}
               onChange={e => updateCategory(currentCategory.id, { title: e.target.value })}
               className="font-bold text-lg text-purple-900 bg-transparent outline-none w-full"
-            />
-          </div>
-
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Дни</h3>
-            <span className="text-xs font-bold text-slate-900 bg-slate-200 px-2 py-1 rounded-lg">
-              {currentCategory.days?.length || 0}
-            </span>
-          </div>
-
-          <div className="space-y-3">
-            {currentCategory.days?.map((day) => (
-              <div 
-                key={day.id}
-                onClick={() => setSelectedDayId(day.id)}
-                className="bg-white p-4 rounded-[20px] border border-slate-100 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]"
-              >
-                <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
-                  <Calendar size={20} />
-                </div>
-                <div className="flex-1">
-                  <input
-                    value={day.title}
-                    onClick={e => e.stopPropagation()}
-                    onChange={e => updateDay(currentCategory.id, day.id, { title: e.target.value })}
-                    className="font-bold text-slate-900 bg-transparent outline-none w-full"
-                  />
-                  <p className="text-xs text-slate-400">
-                    {day.lessons?.length || 0} уроков {day.homework ? '• ДЗ' : ''}
-                  </p>
-                </div>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); deleteDay(currentCategory.id, day.id); }}
-                  className="p-2 text-slate-300 hover:text-red-500 transition-colors"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={() => addDay(currentCategory.id)}
-            className="w-full py-4 border-2 border-dashed border-slate-300 rounded-[20px] text-slate-400 font-bold text-sm flex items-center justify-center gap-2 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all active:scale-95"
-          >
-            <Calendar size={18} /> Добавить день
-          </button>
-        </>
-      )}
-
-      {/* Lessons inside Day */}
-      {selectedCategoryId && selectedDayId && currentCategory && currentDay && (
-        <>
-          <button 
-            onClick={() => setSelectedDayId(null)}
-            className="flex items-center gap-2 text-slate-500 font-bold text-sm mb-4 hover:text-slate-900"
-          >
-            <ChevronLeft size={16} /> Назад к дням
-          </button>
-
-          <div className="bg-blue-50 p-4 rounded-[20px] border border-blue-100 mb-4">
-            <p className="text-xs text-blue-600 font-bold mb-1">{currentCategory.title}</p>
-            <input
-              value={currentDay.title}
-              onChange={e => updateDay(currentCategory.id, currentDay.id, { title: e.target.value })}
-              className="font-bold text-lg text-blue-900 bg-transparent outline-none w-full"
             />
           </div>
 

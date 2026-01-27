@@ -647,10 +647,19 @@ export const CoursesView: React.FC<ViewProps> = ({ user, onBuyCourse, onNavigate
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-2">{t('courses_empty_title', language)}</h3>
               <p className="text-sm text-slate-500 mb-6 max-w-[250px] mx-auto">{t('courses_empty_desc', language)}</p>
+              {!user?.isGuest && (
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleOpenEditor()}
+                  className="px-6 py-3 bg-slate-900 text-white rounded-full font-bold text-sm inline-flex items-center gap-2 mb-3"
+                >
+                  <Plus size={16} /> {t('courses_create_first', language)}
+                </motion.button>
+              )}
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setShowMyCoursesOnly(false)}
-                className="px-6 py-3 bg-slate-900 text-white rounded-full font-bold text-sm inline-flex items-center gap-2"
+                className="px-6 py-3 bg-slate-100 text-slate-700 rounded-full font-bold text-sm inline-flex items-center gap-2"
               >
                 {t('courses_browse', language)} <ArrowRight size={16} />
               </motion.button>

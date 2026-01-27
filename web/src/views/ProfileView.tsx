@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { User as UserIcon, Crown, Settings, Zap, History, ChevronRight, Key, LogIn, Briefcase, Trash2, Star, Shield, Pencil, Check, X } from 'lucide-react';
+import { User as UserIcon, Crown, Settings, Zap, History, ChevronRight, Key, LogIn, Briefcase, Trash2, Star, Shield, Pencil, Check, X, Calendar, Plus, FileText } from 'lucide-react';
 import { User, Language, HistoryItem, ViewState, UsageState, Platform } from '../types';
 import { subscribeToHistory } from '../services/historyService';
 import { t } from '../services/translations';
@@ -46,6 +46,11 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, langua
     const [isEditingNickname, setIsEditingNickname] = useState(false);
     const [newNickname, setNewNickname] = useState(user.nickname || '');
     const [nicknameError, setNicknameError] = useState('');
+    const [isEditingBio, setIsEditingBio] = useState(false);
+    const [newBio, setNewBio] = useState(user.bio || '');
+    const [isEditingServices, setIsEditingServices] = useState(false);
+    const [newService, setNewService] = useState('');
+    const [services, setServices] = useState<string[]>(user.services || []);
 
     const handleSaveName = async () => {
         if (!newName.trim() || newName === user.name) {
@@ -105,6 +110,54 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, langua
         }
 
         setIsEditingNickname(false);
+    };
+
+    const handleSaveBio = async () => {
+        const bio = newBio.trim();
+        if (user.id && !user.isGuest) {
+            try {
+                await db.collection('users').doc(user.id).set({ bio }, { merge: true });
+                const updatedUser = { ...user, bio };
+                if (onUpdateUser) onUpdateUser(updatedUser);
+                localStorage.setItem('x5_user', JSON.stringify(updatedUser));
+            } catch (e) {
+                console.error("Failed to save bio", e);
+            }
+        }
+        setIsEditingBio(false);
+    };
+
+    const handleAddService = async () => {
+        const svc = newService.trim();
+        if (!svc) return;
+        const updated = [...services, svc];
+        setServices(updated);
+        setNewService('');
+        if (user.id && !user.isGuest) {
+            try {
+                await db.collection('users').doc(user.id).set({ services: updated }, { merge: true });
+                const updatedUser = { ...user, services: updated };
+                if (onUpdateUser) onUpdateUser(updatedUser);
+                localStorage.setItem('x5_user', JSON.stringify(updatedUser));
+            } catch (e) {
+                console.error("Failed to save services", e);
+            }
+        }
+    };
+
+    const handleRemoveService = async (idx: number) => {
+        const updated = services.filter((_, i) => i !== idx);
+        setServices(updated);
+        if (user.id && !user.isGuest) {
+            try {
+                await db.collection('users').doc(user.id).set({ services: updated }, { merge: true });
+                const updatedUser = { ...user, services: updated };
+                if (onUpdateUser) onUpdateUser(updatedUser);
+                localStorage.setItem('x5_user', JSON.stringify(updatedUser));
+            } catch (e) {
+                console.error("Failed to save services", e);
+            }
+        }
     };
 
     const handleCancelEdit = () => {
@@ -387,6 +440,97 @@ export const ProfileView: React.FC<ProfileViewProps> = ({ user, onLogout, langua
                         <span className="text-[9px] text-slate-400 font-bold mt-1 tracking-tight">
                             Since: {new Date(user.subscriptionDate).toLocaleDateString()}
                         </span>
+                    )}
+                </div>
+            )}
+
+            {/* BIO & SERVICES — Profile Packaging */}
+            {!user.isGuest && (
+                <div className="w-full bg-white rounded-[28px] p-5 shadow-lg shadow-slate-200/40 border border-slate-100 mb-5 shrink-0">
+                    {/* Bio */}
+                    <div className="mb-4">
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">О себе</h4>
+                            {!isEditingBio && (
+                                <button onClick={() => { setIsEditingBio(true); setNewBio(user.bio || ''); }} className="text-slate-400 hover:text-slate-600">
+                                    <Pencil size={12} />
+                                </button>
+                            )}
+                        </div>
+                        {isEditingBio ? (
+                            <div className="space-y-2">
+                                <textarea
+                                    value={newBio}
+                                    onChange={(e) => setNewBio(e.target.value)}
+                                    placeholder="Расскажите о себе, опыте, навыках..."
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-800 resize-none focus:outline-none focus:border-blue-400"
+                                    rows={3}
+                                    maxLength={300}
+                                    autoFocus
+                                />
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] text-slate-400">{newBio.length}/300</span>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setIsEditingBio(false)} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold">Отмена</button>
+                                        <button onClick={handleSaveBio} className="px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold">Сохранить</button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <p className="text-sm text-slate-600 leading-relaxed">
+                                {user.bio || <span className="text-slate-400 italic">Нажмите чтобы добавить описание</span>}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Services / Skills */}
+                    <div className="mb-3">
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Услуги</h4>
+                            <button onClick={() => setIsEditingServices(!isEditingServices)} className="text-slate-400 hover:text-slate-600">
+                                {isEditingServices ? <Check size={12} /> : <Pencil size={12} />}
+                            </button>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {services.map((svc, idx) => (
+                                <span key={idx} className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 rounded-full text-xs font-bold">
+                                    {svc}
+                                    {isEditingServices && (
+                                        <button onClick={() => handleRemoveService(idx)} className="text-slate-400 hover:text-red-500 ml-0.5">
+                                            <X size={10} />
+                                        </button>
+                                    )}
+                                </span>
+                            ))}
+                            {services.length === 0 && !isEditingServices && (
+                                <span className="text-xs text-slate-400 italic">Добавьте свои услуги</span>
+                            )}
+                        </div>
+                        {isEditingServices && (
+                            <div className="flex items-center gap-2 mt-2">
+                                <input
+                                    type="text"
+                                    value={newService}
+                                    onChange={(e) => setNewService(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAddService()}
+                                    placeholder="Дизайн, SMM, Видео..."
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                                />
+                                <button onClick={handleAddService} className="w-8 h-8 bg-slate-900 text-white rounded-full flex items-center justify-center shrink-0">
+                                    <Plus size={14} />
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Registration Date */}
+                    {user.createdAt && (
+                        <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+                            <Calendar size={12} className="text-slate-400" />
+                            <span className="text-[10px] text-slate-400 font-bold">
+                                На платформе с {new Date(user.createdAt).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+                            </span>
+                        </div>
                     )}
                 </div>
             )}
