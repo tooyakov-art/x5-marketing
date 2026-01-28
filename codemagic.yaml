@@ -7,8 +7,6 @@ workflows:
       flutter: stable
       android_signing:
         - x5_keystore  # Upload keystore in Codemagic UI with this reference name
-      groups:
-        - android_credentials  # CM_KEY_ALIAS, CM_KEY_PASSWORD, CM_KEYSTORE_PASSWORD
     scripts:
       - name: Set up local properties
         script: echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/flutter/android/local.properties"
