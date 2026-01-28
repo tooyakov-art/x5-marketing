@@ -994,81 +994,71 @@ function App() {
 
                     </div>
 
-                    {/* MODERN TAB BAR - Light & Clean */}
+                    {/* LIQUID GLASS TAB BAR - iOS 26 Style */}
                     {isTabBarVisible && ['home', 'profile', 'courses', 'hire', 'chats_list'].includes(currentView) && (
-                        <div className="absolute bottom-0 left-0 w-full z-40 md:hidden pointer-events-none pb-4 px-4">
+                        <div
+                            className="fixed bottom-0 left-0 w-full z-[100] md:hidden pointer-events-none px-6"
+                            style={{
+                                paddingBottom: platform === 'android'
+                                    ? '16px'
+                                    : 'max(20px, env(safe-area-inset-bottom, 20px))'
+                            }}
+                        >
                             <motion.div
-                                initial={{ y: 100, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ type: 'spring', damping: 20 }}
+                                initial={false}
+                                animate={{ y: 0, opacity: 1, scale: 1 }}
+                                transition={{ type: 'spring', damping: 22, stiffness: 260 }}
                                 className="pointer-events-auto"
                             >
-                                <div className="relative flex items-center justify-around px-2 py-2 rounded-2xl bg-white/90 backdrop-blur-xl border border-slate-200/50 shadow-lg shadow-slate-900/10">
-
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => handleNavigate('home')}
-                                        className="relative w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1"
-                                    >
-                                        {currentView === 'home' && (
-                                            <motion.div
-                                                layoutId="tabIndicator"
-                                                className="absolute inset-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl"
-                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                            />
-                                        )}
-                                        <Home size={20} className={`relative z-10 ${currentView === 'home' ? 'text-white' : 'text-slate-400'}`} />
-                                        <span className={`text-[10px] font-semibold relative z-10 ${currentView === 'home' ? 'text-white' : 'text-slate-400'}`}>Главная</span>
-                                    </motion.button>
-
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => handleNavigate('courses')}
-                                        className="relative w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1"
-                                    >
-                                        {currentView === 'courses' && (
-                                            <motion.div
-                                                layoutId="tabIndicator"
-                                                className="absolute inset-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl"
-                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                            />
-                                        )}
-                                        <GraduationCap size={20} className={`relative z-10 ${currentView === 'courses' ? 'text-white' : 'text-slate-400'}`} />
-                                        <span className={`text-[10px] font-semibold relative z-10 ${currentView === 'courses' ? 'text-white' : 'text-slate-400'}`}>Курсы</span>
-                                    </motion.button>
-
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => handleNavigate('hire')}
-                                        className="relative w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1"
-                                    >
-                                        {currentView === 'hire' && (
-                                            <motion.div
-                                                layoutId="tabIndicator"
-                                                className="absolute inset-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl"
-                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                            />
-                                        )}
-                                        <Briefcase size={20} className={`relative z-10 ${currentView === 'hire' ? 'text-white' : 'text-slate-400'}`} />
-                                        <span className={`text-[10px] font-semibold relative z-10 ${currentView === 'hire' ? 'text-white' : 'text-slate-400'}`}>Биржа</span>
-                                    </motion.button>
-
-                                    <motion.button
-                                        whileTap={{ scale: 0.9 }}
-                                        onClick={() => handleNavigate('profile')}
-                                        className="relative w-14 h-14 rounded-xl flex flex-col items-center justify-center gap-1"
-                                    >
-                                        {currentView === 'profile' && (
-                                            <motion.div
-                                                layoutId="tabIndicator"
-                                                className="absolute inset-1 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl"
-                                                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                                            />
-                                        )}
-                                        <UserIcon size={20} className={`relative z-10 ${currentView === 'profile' ? 'text-white' : 'text-slate-400'}`} />
-                                        <span className={`text-[10px] font-semibold relative z-10 ${currentView === 'profile' ? 'text-white' : 'text-slate-400'}`}>Профиль</span>
-                                    </motion.button>
-
+                                <div
+                                    className="relative flex items-center justify-around px-1.5 py-1.5 rounded-[22px]"
+                                    style={{
+                                        background: 'rgba(250,250,250,0.98)', // Solid visible background
+                                        backdropFilter: 'blur(20px)',
+                                        WebkitBackdropFilter: 'blur(20px)',
+                                        border: '1px solid rgba(0,0,0,0.06)',
+                                        boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                                    }}
+                                >
+                                    {[
+                                        { view: 'home', icon: Home, label: 'Главная' },
+                                        { view: 'courses', icon: GraduationCap, label: 'Курсы' },
+                                        { view: 'chats_list', icon: MessageCircle, label: 'Чат' },
+                                        { view: 'hire', icon: Briefcase, label: 'Биржа' },
+                                        { view: 'profile', icon: UserIcon, label: 'Профиль' },
+                                    ].map(({ view, icon: Icon, label }) => {
+                                        const isActive = currentView === view;
+                                        return (
+                                            <motion.button
+                                                key={view}
+                                                whileTap={{ scale: 0.85 }}
+                                                onClick={() => handleNavigate(view as any)}
+                                                className="relative flex flex-col items-center justify-center gap-0.5 py-2 px-3 rounded-[16px]"
+                                            >
+                                                {isActive && (
+                                                    <motion.div
+                                                        layoutId="glassIndicator"
+                                                        className="absolute inset-0 rounded-[16px]"
+                                                        style={{
+                                                            background: 'rgba(255,255,255,0.35)',
+                                                            boxShadow: '0 2px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.5)',
+                                                        }}
+                                                        transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                                                    />
+                                                )}
+                                                <Icon
+                                                    size={21}
+                                                    className={`relative z-10 transition-colors duration-200 ${
+                                                        isActive ? 'text-slate-900' : 'text-slate-400'
+                                                    }`}
+                                                    strokeWidth={isActive ? 2.2 : 1.8}
+                                                />
+                                                <span className={`text-[9px] font-semibold relative z-10 transition-colors duration-200 ${
+                                                    isActive ? 'text-slate-900' : 'text-slate-400'
+                                                }`}>{label}</span>
+                                            </motion.button>
+                                        );
+                                    })}
                                 </div>
                             </motion.div>
                         </div>
