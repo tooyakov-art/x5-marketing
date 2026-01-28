@@ -57,18 +57,69 @@ All user text via `translations[language].key` (ru, en, kz).
 
 | Platform | Repository | Action |
 |----------|------------|--------|
-| **Android** | `x5-marketing-new` (THIS repo) | Push directly, Codemagic builds from here |
-| **iOS** | `5x-flutter` (separate repo) | Copy `flutter/` contents there, then push |
+| **Android** | `x5-marketing-new` (THIS repo) | Push directly, start build MANUALLY |
+| **iOS** | `5x-flutter` (separate repo) | Copy `flutter/` contents there, push, start build MANUALLY |
 
 ### Android Deployment
 1. Make changes in `flutter/` folder in THIS repo
 2. Push to `x5-marketing-new`
-3. Codemagic automatically builds Android APK/AAB
+3. Go to Codemagic → Start build MANUALLY (no auto-trigger!)
 
 ### iOS Deployment
-1. Copy `flutter/` contents to `5x-flutter` repo
-2. Push to trigger Codemagic iOS build
-3. DO NOT create new repo or certificates!
+1. Copy `flutter/` contents to `5x-flutter-temp` repo:
+   ```bash
+   cp -r flutter/lib 5x-flutter-temp/
+   cp flutter/pubspec.yaml 5x-flutter-temp/
+   cp flutter/pubspec.lock 5x-flutter-temp/
+   ```
+2. Push to `5x-flutter`
+3. Go to Codemagic → Start build MANUALLY
+
+### ⚠️ CODEMAGIC RULES ⚠️
+- **NO AUTO TRIGGERS** - all builds manual only!
+- **NO web-deploy workflow** - Firebase deploy via console only
+- **NO hardcoded versions** in codemagic.yaml - use pubspec.yaml
+- User controls when to spend money on builds
+
+## Web Deployment (MANUAL ONLY)
+```bash
+cd web && npm run build && npx firebase deploy --only hosting --project x5-marketing-app
+```
+DO NOT use Codemagic for web deployment!
+
+## Flutter Critical Bugs Fixed
+
+### Firebase Init Race Condition
+```dart
+// ✅ CORRECT - Firebase BEFORE runApp
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();  // MUST complete before app starts
+  runApp(MyApp());
+}
+
+// ❌ WRONG - inside runZonedGuarded causes race condition
+void main() async {
+  runZonedGuarded(() async {
+    await Firebase.initializeApp();  // May not complete before runApp!
+    runApp(MyApp());
+  }, ...);
+}
+```
+
+### iOS Google Sign-In
+iOS requires explicit clientId, Android does not:
+```dart
+final googleSignIn = Platform.isIOS
+    ? GoogleSignIn(clientId: 'xxx.apps.googleusercontent.com')
+    : GoogleSignIn();
+```
+
+### Android Release Build
+Requires in AndroidManifest.xml:
+- `android:usesCleartextTraffic="true"`
+- `android:networkSecurityConfig="@xml/network_security_config"`
+- RECORD_AUDIO, MODIFY_AUDIO_SETTINGS permissions
 
 ## Links
 - Firebase: https://console.firebase.google.com/project/x5-marketing-app
