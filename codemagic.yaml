@@ -60,10 +60,7 @@ workflows:
     name: iOS Release
     max_build_duration: 60
     instance_type: mac_mini_m2
-    # NO auto triggers - manual only
-    triggering:
-      events: []
-      branch_patterns: []
+    # NO triggering section = manual only builds
     integrations:
       app_store_connect: X5 Marketing
     environment:
