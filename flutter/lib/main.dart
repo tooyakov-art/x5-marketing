@@ -15,32 +15,26 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 // Screen protection disabled for now, will re-add with platform channels later
 
 void main() async {
-  // Wrap everything in error handling
-  runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize Firebase with error handling
-    try {
-      await Firebase.initializeApp();
-      print("✅ Firebase initialized successfully");
-    } catch (e) {
-      print("⚠️ Firebase init error (may be normal on web): $e");
-    }
+  // Initialize Firebase BEFORE runApp - CRITICAL for auth
+  try {
+    await Firebase.initializeApp();
+    print("✅ Firebase initialized successfully");
+  } catch (e) {
+    print("⚠️ Firebase init error: $e");
+  }
 
-    // Catch any unhandled Flutter errors
-    FlutterError.onError = (FlutterErrorDetails details) {
-      print("❌ Flutter error: ${details.exception}");
-      FlutterError.presentError(details);
-    };
+  // Catch any unhandled Flutter errors
+  FlutterError.onError = (FlutterErrorDetails details) {
+    print("❌ Flutter error: ${details.exception}");
+    FlutterError.presentError(details);
+  };
 
-    runApp(const MaterialApp(
-      home: X5BridgeApp(),
-      debugShowCheckedModeBanner: false,
-    ));
-  }, (error, stackTrace) {
-    print("❌ Unhandled error: $error");
-    print("Stack trace: $stackTrace");
-  });
+  runApp(const MaterialApp(
+    home: X5BridgeApp(),
+    debugShowCheckedModeBanner: false,
+  ));
 }
 
 class X5BridgeApp extends StatefulWidget {
