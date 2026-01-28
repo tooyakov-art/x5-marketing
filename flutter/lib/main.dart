@@ -321,7 +321,12 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
   // 🔵 GOOGLE SIGN IN
   Future<void> _signInWithGoogle() async {
     try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      // iOS requires explicit clientId from GoogleService-Info.plist
+      final googleSignIn = Platform.isIOS
+          ? GoogleSignIn(clientId: '931639129066-drd4qhjo5pgki47itjup0dibft0a7i3f.apps.googleusercontent.com')
+          : GoogleSignIn();
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
       
       if (googleUser == null) {
         // User cancelled
