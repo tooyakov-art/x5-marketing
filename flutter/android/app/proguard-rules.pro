@@ -38,6 +38,32 @@
 -keepattributes SourceFile,LineNumberTable
 -keepattributes Signature
 
+# JavaScript Interfaces for WebView Bridge
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keepattributes JavascriptInterface
+
+# Kotlin
+-keep class kotlin.** { *; }
+-keep class kotlinx.** { *; }
+-dontwarn kotlin.**
+-dontwarn kotlinx.**
+
+# OkHttp/Retrofit (if used by dependencies)
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keep class okhttp3.** { *; }
+-keep class okio.** { *; }
+
 # General
 -dontwarn javax.**
 -dontwarn java.awt.**
+
+# Keep native methods
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Keep R8 from removing any classes used via reflection
+-keep,allowobfuscation,allowshrinking class * extends android.app.Activity

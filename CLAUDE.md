@@ -51,12 +51,23 @@ Use `useToast()` hook, not browser `alert()`.
 ### Translations
 All user text via `translations[language].key` (ru, en, kz).
 
-## iOS Deployment
+## Mobile Deployment
 
-**⚠️ USE EXISTING REPO `5x-flutter`! ⚠️**
+### ⚠️ CRITICAL: Android vs iOS ⚠️
 
+| Platform | Repository | Action |
+|----------|------------|--------|
+| **Android** | `x5-marketing-new` (THIS repo) | Push directly, Codemagic builds from here |
+| **iOS** | `5x-flutter` (separate repo) | Copy `flutter/` contents there, then push |
+
+### Android Deployment
+1. Make changes in `flutter/` folder in THIS repo
+2. Push to `x5-marketing-new`
+3. Codemagic automatically builds Android APK/AAB
+
+### iOS Deployment
 1. Copy `flutter/` contents to `5x-flutter` repo
-2. Push to trigger Codemagic
+2. Push to trigger Codemagic iOS build
 3. DO NOT create new repo or certificates!
 
 ## Links

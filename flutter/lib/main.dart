@@ -55,6 +55,7 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
   StreamSubscription<List<PurchaseDetails>>? _subscription;
   InAppWebViewController? _webViewController;
   bool _isLoading = true;
+  String? _loadError;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   bool _screenProtectionEnabled = false;
@@ -86,6 +87,19 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
     // 🚀 Defer platform-specific initialization to after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initPlatformState();
+    });
+
+    // ⏰ TIMEOUT: Hide loading after 15 seconds no matter what
+    Future.delayed(const Duration(seconds: 15), () {
+      if (mounted && _isLoading) {
+        print("⚠️ Loading timeout - forcing hide");
+        setState(() {
+          _isLoading = false;
+          if (_loadError == null) {
+            _loadError = "Загрузка занимает слишком долго. Проверьте интернет.";
+          }
+        });
+      }
     });
   }
 
@@ -372,6 +386,7 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
               transparentBackground: true,
               useHybridComposition: true, // For better Android performance
               allowsInlineMediaPlayback: true,
+              mediaPlaybackRequiresUserGesture: false,
               // 🚫 DISABLE CACHE - Always load fresh content
               cacheEnabled: false,
               clearCache: true,
@@ -445,17 +460,36 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
                 },
               );
             },
+            // 🎤 Handle microphone/camera permission requests from web
+            onPermissionRequest: (controller, request) async {
+              print("🎤 Permission request: ${request.resources}");
+              return PermissionResponse(
+                resources: request.resources,
+                action: PermissionResponseAction.GRANT,
+              );
+            },
             onLoadStop: (controller, url) async {
+              print("✅ Page loaded: $url");
               // Wait a bit to ensure smooth transition
               await Future.delayed(const Duration(seconds: 1));
               if (mounted) {
                 setState(() {
                   _isLoading = false;
+                  _loadError = null;
+                });
+              }
+            },
+            onReceivedError: (controller, request, error) {
+              print("❌ Received error: ${error.type} - ${error.description}");
+              if (mounted && error.type != WebResourceErrorType.CANCELLED) {
+                setState(() {
+                  _isLoading = false;
+                  _loadError = "Ошибка сети: ${error.description}";
                 });
               }
             },
             onProgressChanged: (controller, progress) {
-               // Optional: Update granular progress if needed
+              print("📊 Loading: $progress%");
             },
           ),
 
@@ -478,7 +512,7 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
                           fontSize: 60,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2.0,
-                          fontFamily: 'Arial', // Fallback, system font usually looks good
+                          fontFamily: 'Arial',
                         ),
                       ),
                     ),
@@ -490,6 +524,44 @@ class _X5BridgeAppState extends State<X5BridgeApp> with SingleTickerProviderStat
                         color: Colors.white,
                         minHeight: 2,
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // ❌ LAYER 3: ERROR OVERLAY
+          if (_loadError != null && !_isLoading)
+            Container(
+              color: Colors.black,
+              width: double.infinity,
+              height: double.infinity,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.wifi_off, color: Colors.white54, size: 64),
+                    const SizedBox(height: 20),
+                    Text(
+                      _loadError!,
+                      style: const TextStyle(color: Colors.white70, fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          _isLoading = true;
+                          _loadError = null;
+                        });
+                        _webViewController?.reload();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                      ),
+                      child: const Text("Повторить"),
                     ),
                   ],
                 ),

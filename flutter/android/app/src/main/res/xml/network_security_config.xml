@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Allow cleartext for local development -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+
+    <!-- Production domains -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">x5marketing.com</domain>
+        <domain includeSubdomains="true">firebase.googleapis.com</domain>
+        <domain includeSubdomains="true">firebaseapp.com</domain>
+        <domain includeSubdomains="true">up.railway.app</domain>
+        <domain includeSubdomains="true">b-cdn.net</domain>
+        <domain includeSubdomains="true">bunnycdn.com</domain>
+    </domain-config>
+</network-security-config>
